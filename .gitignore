@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+ml-service/venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Environment files
+.env
+*.local
+!.env.example
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Large Model Binaries (>100MB)
+# Note: In production or remote Git pushes, use Git LFS for ml-service/model/fire_type_model.pkl (208 MB)
+# or download it during CI/CD from secure artifact storage.
