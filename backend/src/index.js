@@ -4,6 +4,7 @@ const morgan = require('morgan');
 const config = require('./config');
 const apiRoutes = require('./routes');
 const dataRepository = require('./repositories');
+const firmsIngestionService = require('./services/firmsIngestionService');
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await dataRepository.init();
+    firmsIngestionService.startScheduledSync();
     const server = app.listen(config.port, () => {
       console.log(`[IndustrialFireAI Backend] Running on http://localhost:${config.port} [${config.nodeEnv}]`);
     });

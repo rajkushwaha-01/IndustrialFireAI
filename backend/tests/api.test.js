@@ -26,7 +26,7 @@ async function runTests() {
     const data = await res.json();
     assert.strictEqual(data.status, 'healthy');
     assert.strictEqual(data.dataLayer.mode, 'csv_repository');
-    assert.strictEqual(data.dataLayer.eventsCount, 224029);
+    assert(data.dataLayer.eventsCount >= 224029);
     assert.strictEqual(data.dataLayer.infrastructureCount, 139682);
     assert.strictEqual(data.services.mlService.reachable, true);
   });
@@ -38,7 +38,7 @@ async function runTests() {
     const data = await res.json();
     assert.strictEqual(data.pagination.page, 1);
     assert.strictEqual(data.pagination.limit, 10);
-    assert.strictEqual(data.pagination.total, 224029);
+    assert(data.pagination.total >= 224029);
     assert.strictEqual(data.data.length, 10);
     assert.strictEqual(data.data[0].id, 1);
   });
@@ -80,7 +80,7 @@ async function runTests() {
     assert.strictEqual(res.status, 200);
     const data = await res.json();
     assert.strictEqual(data.success, true);
-    assert.strictEqual(data.data.totalEvents, 224029);
+    assert(data.data.totalEvents >= 224029);
     assert(data.data.byClassification['Industrial Fire'].count > 0);
     assert(data.data.byClassification['Natural Fire'].count > 0);
     assert(data.data.byClassification['Persistent Thermal Source'].count > 0);
@@ -93,8 +93,9 @@ async function runTests() {
     assert.strictEqual(res.status, 200);
     const data = await res.json();
     assert.strictEqual(data.type, 'FeatureCollection');
-    assert.strictEqual(data.features.length, 0);
-    assert(data.metadata.notice.includes('synthetic coordinates are not fabricated'));
+    assert(Array.isArray(data.features));
+    assert(data.features.length >= 0);
+    assert(data.metadata.totalEvents >= 224029);
   });
 
   // 8. Infrastructure
@@ -169,6 +170,75 @@ async function runTests() {
     assert.strictEqual(res.status, 422);
     const data = await res.json();
     assert.strictEqual(data.success, false);
+  });
+
+  // 13. Event Spatial Context
+  await test('GET /events/:id returns spatial_context and classification', async () => {
+    const res = await fetch(`${BASE_URL}/events/1`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.strictEqual(data.data.classification, 'Persistent Thermal Source');
+    assert.strictEqual(typeof data.data.spatial_context, 'object');
+    assert(data.data.spatial_context.nearest_industrial_area_km !== undefined);
+    assert(data.data.spatial_context.nearest_power_plant_km !== undefined);
+  });
+
+  // 14. Spatial Correlate Endpoint
+  await test('GET /spatial/correlate returns geodesic proximity to 139k OSM features', async () => {
+    // Coordinate near Jamnagar, Gujarat
+    const res = await fetch(`${BASE_URL}/spatial/correlate?lat=22.47&lon=70.06&radius=25`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.strictEqual(data.data.latitude, 22.47);
+    assert.strictEqual(data.data.longitude, 70.06);
+    assert.strictEqual(typeof data.data.spatial_context, 'object');
+    assert(data.data.spatial_context.nearest_industrial_area_km !== null);
+    assert(data.data.spatial_context.nearby_infrastructure_count > 0);
+  });
+
+  // 15. Spatial Nearby Endpoint
+  await test('GET /spatial/nearby returns sorted infrastructure list within radius', async () => {
+    const res = await fetch(`${BASE_URL}/spatial/nearby?lat=22.47&lon=70.06&radius=25&limit=5`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert(Array.isArray(data.data));
+    assert(data.data.length <= 5);
+    if (data.data.length > 0) {
+      assert(data.data[0].distance_km !== undefined);
+      assert(data.data[0].category !== undefined);
+    }
+  });
+
+  // 16. FIRMS Status Endpoint
+  await test('GET /firms/status returns pipeline configuration without exposing credentials', async () => {
+    const res = await fetch(`${BASE_URL}/firms/status`);
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.strictEqual(typeof data.data.has_map_key, 'boolean');
+    assert.strictEqual(data.data.mapKey, undefined);
+  });
+
+  // 17. FIRMS Manual Ingestion Trigger
+  await test('POST /firms/ingest executes ingestion pipeline and returns statistics', async () => {
+    const res = await fetch(`${BASE_URL}/firms/ingest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'csv_content',
+        csvContent: 'latitude,longitude,frp,acq_date\n22.80,70.50,60.0,2024-03-26\n22.80,70.50,60.0,2024-03-26'
+      })
+    });
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.strictEqual(data.data.records_received, 2);
+    assert.strictEqual(data.data.records_inserted, 1);
+    assert.strictEqual(data.data.duplicates, 1);
+    assert.strictEqual(data.data.invalid_records, 0);
   });
 
   console.log(`\n--- Test Summary: ${passed} Passed, ${failed} Failed ---`);

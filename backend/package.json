@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node tests/api.test.js"
+    "test": "node tests/canonical_event.test.js && node tests/spatial_correlation.test.js && node tests/firms_pipeline.test.js && node tests/api.test.js",
+    "import:firms": "node src/scripts/importFirms.js"
   },
   "keywords": [
     "fire-detection",

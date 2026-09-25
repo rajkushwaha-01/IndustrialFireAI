@@ -7,13 +7,12 @@ class DataRepository {
   }
 
   async init() {
-    // Attempt database check, fallback to CSV repository
     try {
       await csvRepository.init();
       this.mode = 'csv';
       return true;
     } catch (err) {
-      console.error('[DataRepository ERROR] Failed to initialize CSV repository:', err);
+      console.error('[DataRepository ERROR] Failed to initialize data repository:', err);
       throw err;
     }
   }
@@ -22,16 +21,32 @@ class DataRepository {
     return this.activeRepo.getEvents(filters, pagination);
   }
 
-  async getEventById(id) {
-    return this.activeRepo.getEventById(id);
+  async getEventById(id, options) {
+    return this.activeRepo.getEventById(id, options);
   }
 
   async getEventStats() {
     return this.activeRepo.getEventStats();
   }
 
+  async getEventsGeoJSON(filters) {
+    return this.activeRepo.getEventsGeoJSON(filters);
+  }
+
+  async addEvents(newEvents) {
+    return this.activeRepo.addEvents(newEvents);
+  }
+
   async getInfrastructure(filters, pagination) {
     return this.activeRepo.getInfrastructure(filters, pagination);
+  }
+
+  calculateSpatialContext(lat, lon, options) {
+    return this.activeRepo.calculateSpatialContext(lat, lon, options);
+  }
+
+  findNearbyInfrastructure(lat, lon, radiusKm, options) {
+    return this.activeRepo.findNearbyInfrastructure(lat, lon, radiusKm, options);
   }
 
   getStatus() {

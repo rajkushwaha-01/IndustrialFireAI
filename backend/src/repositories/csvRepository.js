@@ -3,11 +3,16 @@ const path = require('path');
 const readline = require('readline');
 const Event = require('../models/Event');
 const Infrastructure = require('../models/Infrastructure');
+const { createFeatureCollection } = require('../utils/geojson');
+const { parseBBox, isPointInBBox } = require('../utils/geoValidation');
+const spatialCorrelationService = require('../services/spatialCorrelationService');
 
 class CsvRepository {
   constructor() {
     this.events = [];
     this.eventsById = new Map();
+    this.eventsWithCoordinatesCount = 0;
+    this.eventsWithoutCoordinatesCount = 0;
     this.infrastructure = [];
     this.infrastructureById = new Map();
     this.infrastructureCategories = new Set();
@@ -16,6 +21,8 @@ class CsvRepository {
     this.loadPromise = null;
     this.eventsPath = null;
     this.infraPath = null;
+    this.canonicalFirmsPath = null;
+    this.eventSignatures = new Set();
   }
 
   resolveFilePaths() {
@@ -28,9 +35,17 @@ class CsvRepository {
     for (const dir of candidateDirs) {
       const ePath = path.join(dir, 'fire_dataset.csv.xls');
       const iPath = path.join(dir, 'osm_india_features.csv');
+      const cPath = path.join(dir, 'firms_canonical_events.csv');
+      const cAltPath = path.join(dir, 'firms_india_events.csv');
+
       if (fs.existsSync(ePath) && fs.existsSync(iPath)) {
         this.eventsPath = ePath;
         this.infraPath = iPath;
+        if (fs.existsSync(cPath)) {
+          this.canonicalFirmsPath = cPath;
+        } else if (fs.existsSync(cAltPath)) {
+          this.canonicalFirmsPath = cAltPath;
+        }
         return;
       }
     }
@@ -50,11 +65,21 @@ class CsvRepository {
     this.loadPromise = (async () => {
       const startTime = Date.now();
       await Promise.all([this.loadEvents(), this.loadInfrastructure()]);
+
+      // Build 2D spatial grid index for ultra-fast geodesic spatial correlation
+      spatialCorrelationService.buildIndex(this.infrastructure);
+
+      // If genuine canonical FIRMS file exists, load it too
+      if (this.canonicalFirmsPath && fs.existsSync(this.canonicalFirmsPath)) {
+        console.log(`[CSV Repository] Found genuine FIRMS dataset at ${this.canonicalFirmsPath}, ingesting...`);
+        await this.loadCanonicalFirmsFile(this.canonicalFirmsPath);
+      }
+
       this.computeGlobalStats();
       this.isLoaded = true;
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       console.log(`[CSV Repository] Dataset loaded successfully in ${duration}s.`);
-      console.log(`  - Total Events: ${this.events.length}`);
+      console.log(`  - Total Events: ${this.events.length} (${this.eventsWithCoordinatesCount} with coordinates, ${this.eventsWithoutCoordinatesCount} legacy)`);
       console.log(`  - Total Infrastructure Points: ${this.infrastructure.length}`);
     })();
 
@@ -73,41 +98,146 @@ class CsvRepository {
         crlfDelay: Infinity
       });
 
-      let header = null;
+      let headerCols = null;
+      let colMap = {};
       let idCounter = 1;
 
       rl.on('line', (line) => {
-        if (!header) {
-          header = line.split(',');
+        if (!line.trim()) return;
+
+        if (!headerCols) {
+          headerCols = line.split(',').map((c) => c.trim().toLowerCase());
+          headerCols.forEach((col, idx) => {
+            colMap[col] = idx;
+          });
           return;
         }
 
         const parts = line.split(',');
-        if (parts.length < 17) return;
+        if (parts.length < 14) return;
 
-        const event = new Event({
-          id: idCounter++,
-          persistence_days: parts[0],
-          detections: parts[1],
-          avg_frp: parts[2],
-          max_frp: parts[3],
-          total_frp: parts[4],
-          avg_bright_ti4: parts[5],
-          avg_bright_ti5: parts[6],
-          night_ratio: parts[7],
-          distance_to_industrial_area_km: parts[8],
-          distance_to_power_plant_km: parts[9],
-          distance_to_quarry_km: parts[10],
-          distance_to_substation_km: parts[11],
-          distance_to_storage_tank_km: parts[12],
-          distance_to_works_km: parts[13],
-          prediction_class: parts[14],
-          prediction_confidence: parts[15],
-          fire_type: parts[16]
-        });
+        let eventData;
+        const hasLatLonHeader = colMap.latitude !== undefined && colMap.longitude !== undefined;
 
+        if (hasLatLonHeader) {
+          eventData = {
+            id: colMap.id !== undefined ? parts[colMap.id] : idCounter++,
+            latitude: parts[colMap.latitude],
+            longitude: parts[colMap.longitude],
+            acquisition_date: colMap.acquisition_date !== undefined ? parts[colMap.acquisition_date] : (colMap.acq_date !== undefined ? parts[colMap.acq_date] : null),
+            acquisition_time: colMap.acquisition_time !== undefined ? parts[colMap.acquisition_time] : (colMap.acq_time !== undefined ? parts[colMap.acq_time] : null),
+            satellite: colMap.satellite !== undefined ? parts[colMap.satellite] : 'NASA FIRMS',
+            frp: colMap.frp !== undefined ? parts[colMap.frp] : (colMap.avg_frp !== undefined ? parts[colMap.avg_frp] : 0),
+            brightness_temperature: colMap.brightness_temperature !== undefined ? parts[colMap.brightness_temperature] : (colMap.avg_bright_ti4 !== undefined ? parts[colMap.avg_bright_ti4] : 0),
+            confidence: colMap.confidence !== undefined ? parts[colMap.confidence] : (colMap.prediction_confidence !== undefined ? parts[colMap.prediction_confidence] : 0),
+            persistence_days: colMap.persistence_days !== undefined ? parts[colMap.persistence_days] : 1,
+            detection_count: colMap.detection_count !== undefined ? parts[colMap.detection_count] : (colMap.detections !== undefined ? parts[colMap.detections] : 1),
+            fire_type: colMap.fire_type !== undefined ? parts[colMap.fire_type] : 'Unknown',
+            prediction_class: colMap.prediction_class !== undefined ? parts[colMap.prediction_class] : '',
+            prediction_confidence: colMap.prediction_confidence !== undefined ? parts[colMap.prediction_confidence] : 0,
+            source: colMap.source !== undefined ? parts[colMap.source] : 'NASA FIRMS'
+          };
+        } else if (parts.length >= 17) {
+          // Legacy fire_dataset.csv.xls format (17 columns without native coordinates)
+          eventData = {
+            id: idCounter++,
+            latitude: null,
+            longitude: null,
+            persistence_days: parts[0],
+            detections: parts[1],
+            avg_frp: parts[2],
+            max_frp: parts[3],
+            total_frp: parts[4],
+            avg_bright_ti4: parts[5],
+            avg_bright_ti5: parts[6],
+            night_ratio: parts[7],
+            distance_to_industrial_area_km: parts[8],
+            distance_to_power_plant_km: parts[9],
+            distance_to_quarry_km: parts[10],
+            distance_to_substation_km: parts[11],
+            distance_to_storage_tank_km: parts[12],
+            distance_to_works_km: parts[13],
+            prediction_class: parts[14],
+            prediction_confidence: parts[15],
+            fire_type: parts[16],
+            source: 'data/fire_dataset.csv.xls'
+          };
+        } else {
+          return;
+        }
+
+        const event = new Event(eventData);
         this.events.push(event);
         this.eventsById.set(event.id, event);
+        this.eventSignatures.add(this.getEventSignature(event));
+
+        if (event.has_coordinates) {
+          this.eventsWithCoordinatesCount++;
+        } else {
+          this.eventsWithoutCoordinatesCount++;
+        }
+      });
+
+      rl.on('close', resolve);
+      rl.on('error', reject);
+    });
+  }
+
+  async loadCanonicalFirmsFile(filePath) {
+    if (!fs.existsSync(filePath)) return;
+
+    return new Promise((resolve, reject) => {
+      const rl = readline.createInterface({
+        input: fs.createReadStream(filePath),
+        crlfDelay: Infinity
+      });
+
+      let headerCols = null;
+      let colMap = {};
+      let idCounter = this.events.length + 1;
+
+      rl.on('line', (line) => {
+        if (!line.trim()) return;
+
+        if (!headerCols) {
+          headerCols = line.split(',').map((c) => c.trim().toLowerCase());
+          headerCols.forEach((col, idx) => {
+            colMap[col] = idx;
+          });
+          return;
+        }
+
+        const parts = line.split(',').map((p) => p.trim().replace(/^["']|["']$/g, ''));
+        if (colMap.latitude === undefined || colMap.longitude === undefined) return;
+
+        const eventData = {
+          id: colMap.id !== undefined && parts[colMap.id] ? Number(parts[colMap.id]) : idCounter++,
+          latitude: parts[colMap.latitude],
+          longitude: parts[colMap.longitude],
+          acquisition_date: colMap.acquisition_date !== undefined ? parts[colMap.acquisition_date] : (colMap.acq_date !== undefined ? parts[colMap.acq_date] : null),
+          acquisition_time: colMap.acquisition_time !== undefined ? parts[colMap.acquisition_time] : (colMap.acq_time !== undefined ? parts[colMap.acq_time] : null),
+          satellite: colMap.satellite !== undefined ? parts[colMap.satellite] : 'NASA FIRMS VIIRS',
+          frp: colMap.frp !== undefined ? parts[colMap.frp] : (colMap.avg_frp !== undefined ? parts[colMap.avg_frp] : 0),
+          brightness_temperature: colMap.brightness_temperature !== undefined ? parts[colMap.brightness_temperature] : (colMap.avg_bright_ti4 !== undefined ? parts[colMap.avg_bright_ti4] : 0),
+          confidence: colMap.confidence !== undefined ? parts[colMap.confidence] : 0.9,
+          persistence_days: colMap.persistence_days !== undefined ? parts[colMap.persistence_days] : 1,
+          detection_count: colMap.detection_count !== undefined ? parts[colMap.detection_count] : 1,
+          fire_type: colMap.fire_type !== undefined ? parts[colMap.fire_type] : 'Industrial Fire',
+          prediction_class: colMap.prediction_class !== undefined ? parts[colMap.prediction_class] : 'HIGH',
+          prediction_confidence: colMap.prediction_confidence !== undefined ? parts[colMap.prediction_confidence] : 0.9,
+          source: colMap.source !== undefined ? parts[colMap.source] : path.basename(filePath)
+        };
+
+        const event = new Event(eventData);
+        this.events.push(event);
+        this.eventsById.set(event.id, event);
+        this.eventSignatures.add(this.getEventSignature(event));
+
+        if (event.has_coordinates) {
+          this.eventsWithCoordinatesCount++;
+        } else {
+          this.eventsWithoutCoordinatesCount++;
+        }
       });
 
       rl.on('close', resolve);
@@ -161,7 +291,11 @@ class CsvRepository {
   computeGlobalStats() {
     const total = this.events.length;
     if (total === 0) {
-      this.precomputedStats = { totalEvents: 0 };
+      this.precomputedStats = { 
+        totalEvents: 0,
+        eventsWithCoordinates: 0,
+        eventsWithoutCoordinates: 0
+      };
       return;
     }
 
@@ -226,27 +360,29 @@ class CsvRepository {
       else persistenceBins['60+d']++;
 
       // FRP
-      if (e.avg_frp < minFrp) minFrp = e.avg_frp;
+      const eventFrp = e.frp || e.avg_frp || 0;
+      if (eventFrp < minFrp) minFrp = eventFrp;
       if (e.max_frp > maxFrp) maxFrp = e.max_frp;
-      sumAvgFrp += e.avg_frp;
-      sumTotalFrp += e.total_frp;
+      sumAvgFrp += eventFrp;
+      sumTotalFrp += e.total_frp || eventFrp;
 
-      if (e.avg_frp <= 5) frpBins['0-5 MW']++;
-      else if (e.avg_frp <= 15) frpBins['5-15 MW']++;
-      else if (e.avg_frp <= 30) frpBins['15-30 MW']++;
-      else if (e.avg_frp <= 50) frpBins['30-50 MW']++;
+      if (eventFrp <= 5) frpBins['0-5 MW']++;
+      else if (eventFrp <= 15) frpBins['5-15 MW']++;
+      else if (eventFrp <= 30) frpBins['15-30 MW']++;
+      else if (eventFrp <= 50) frpBins['30-50 MW']++;
       else frpBins['50+ MW']++;
 
       // Detections
-      if (e.detections <= 5) detectionBins['1-5']++;
-      else if (e.detections <= 20) detectionBins['6-20']++;
-      else if (e.detections <= 50) detectionBins['21-50']++;
-      else if (e.detections <= 100) detectionBins['51-100']++;
+      const eventDetections = e.detections || e.detection_count || 1;
+      if (eventDetections <= 5) detectionBins['1-5']++;
+      else if (eventDetections <= 20) detectionBins['6-20']++;
+      else if (eventDetections <= 50) detectionBins['21-50']++;
+      else if (eventDetections <= 100) detectionBins['51-100']++;
       else detectionBins['100+']++;
 
       // Temperatures
-      sumTi4 += e.avg_bright_ti4;
-      sumTi5 += e.avg_bright_ti5;
+      sumTi4 += e.brightness_temperature || e.avg_bright_ti4 || 0;
+      sumTi5 += e.avg_bright_ti5 || 0;
 
       // Distances
       sumDistIndustrial += e.distance_to_industrial_area_km;
@@ -261,7 +397,7 @@ class CsvRepository {
         const item = classComparisonAgg[e.fire_type];
         item.count++;
         item.pSum += e.persistence_days;
-        item.frpSum += e.avg_frp;
+        item.frpSum += eventFrp;
         item.nightSum += e.night_ratio;
         item.distIndSum += e.distance_to_industrial_area_km;
         item.distWorksSum += e.distance_to_works_km;
@@ -288,6 +424,8 @@ class CsvRepository {
 
     this.precomputedStats = {
       totalEvents: total,
+      eventsWithCoordinates: this.eventsWithCoordinatesCount,
+      eventsWithoutCoordinates: this.eventsWithoutCoordinatesCount,
       byClassification: classificationPct,
       byPredictionClass,
       highConfidenceStats: {
@@ -297,8 +435,8 @@ class CsvRepository {
         targetPrecision: 100
       },
       persistence: {
-        min: minPersistence,
-        max: maxPersistence,
+        min: minPersistence === Infinity ? 0 : minPersistence,
+        max: maxPersistence === -Infinity ? 0 : maxPersistence,
         avg: Number((sumPersistence / total).toFixed(2))
       },
       persistenceDistribution: [
@@ -324,8 +462,8 @@ class CsvRepository {
       ],
       classComparison,
       frp: {
-        minAvgFrp: Number(minFrp.toFixed(2)),
-        maxFrp: Number(maxFrp.toFixed(2)),
+        minAvgFrp: Number((minFrp === Infinity ? 0 : minFrp).toFixed(2)),
+        maxFrp: Number((maxFrp === -Infinity ? 0 : maxFrp).toFixed(2)),
         avgFrp: Number((sumAvgFrp / total).toFixed(2)),
         totalFrpSum: Number(sumTotalFrp.toFixed(2))
       },
@@ -341,7 +479,7 @@ class CsvRepository {
         storageTank: Number((sumDistStorage / total).toFixed(2)),
         works: Number((sumDistWorks / total).toFixed(2))
       },
-      dataIntegrityNotice: 'Aggregations computed from 100% authoritative observations in data/fire_dataset.csv.xls.'
+      dataIntegrityNotice: `Aggregations computed across ${total} observations. (${this.eventsWithCoordinatesCount} georeferenced events, ${this.eventsWithoutCoordinatesCount} legacy observations).`
     };
   }
 
@@ -354,15 +492,21 @@ class CsvRepository {
       minConfidence,
       maxConfidence,
       minPersistence,
-      maxPersistence
+      maxPersistence,
+      hasCoordinates,
+      radiusKm,
+      radius
     } = filters;
+
+    const radiusThreshold = Number(radiusKm || radius || 10.0);
 
     const hasFilters = classification || 
       search ||
       minConfidence !== undefined || 
       maxConfidence !== undefined || 
       minPersistence !== undefined || 
-      maxPersistence !== undefined;
+      maxPersistence !== undefined ||
+      hasCoordinates !== undefined;
 
     if (hasFilters) {
       const clsLower = classification ? classification.toLowerCase() : null;
@@ -372,28 +516,34 @@ class CsvRepository {
       const maxConf = maxConfidence !== undefined ? Number(maxConfidence) : null;
       const minPers = minPersistence !== undefined ? Number(minPersistence) : null;
       const maxPers = maxPersistence !== undefined ? Number(maxPersistence) : null;
+      const reqCoords = hasCoordinates !== undefined ? (String(hasCoordinates).toLowerCase() === 'true') : null;
 
       result = result.filter((e) => {
+        if (reqCoords !== null && e.has_coordinates !== reqCoords) {
+          return false;
+        }
+
         if (searchClean) {
           if (searchId !== null && e.id === searchId) {
             // exact ID match
           } else {
-            const matchFireType = e.fire_type.toLowerCase().includes(searchClean);
-            const matchPredClass = e.prediction_class.toLowerCase().includes(searchClean);
+            const matchFireType = e.fire_type && e.fire_type.toLowerCase().includes(searchClean);
+            const matchPredClass = e.prediction_class && e.prediction_class.toLowerCase().includes(searchClean);
             if (!matchFireType && !matchPredClass) return false;
           }
         }
 
         if (clsLower) {
-          const matchFireType = e.fire_type.toLowerCase().includes(clsLower);
-          const matchPredClass = e.prediction_class.toLowerCase() === clsLower;
+          const matchFireType = e.fire_type && e.fire_type.toLowerCase().includes(clsLower);
+          const matchPredClass = e.prediction_class && e.prediction_class.toLowerCase() === clsLower;
           if (!matchFireType && !matchPredClass) return false;
         }
 
-        if (minConf !== null && !isNaN(minConf) && e.prediction_confidence < minConf) {
+        const conf = e.confidence !== undefined ? Number(e.confidence) : e.prediction_confidence;
+        if (minConf !== null && !isNaN(minConf) && conf < minConf) {
           return false;
         }
-        if (maxConf !== null && !isNaN(maxConf) && e.prediction_confidence > maxConf) {
+        if (maxConf !== null && !isNaN(maxConf) && conf > maxConf) {
           return false;
         }
         if (minPers !== null && !isNaN(minPers) && e.persistence_days < minPers) {
@@ -412,7 +562,11 @@ class CsvRepository {
     const limit = Math.min(1000, Math.max(1, Number(pagination.limit) || 50));
     const totalPages = Math.ceil(total / limit) || 1;
     const startIndex = (page - 1) * limit;
-    const items = result.slice(startIndex, startIndex + limit).map((e) => e.toJSON());
+
+    // Map items and attach genuine spatial context
+    const items = result.slice(startIndex, startIndex + limit).map((e) => {
+      return spatialCorrelationService.correlateEvent(e, { radiusKm: radiusThreshold });
+    });
 
     return {
       pagination: {
@@ -426,19 +580,192 @@ class CsvRepository {
         minConfidence: minConfidence !== undefined ? Number(minConfidence) : null,
         maxConfidence: maxConfidence !== undefined ? Number(maxConfidence) : null,
         minPersistence: minPersistence !== undefined ? Number(minPersistence) : null,
-        maxPersistence: maxPersistence !== undefined ? Number(maxPersistence) : null
+        maxPersistence: maxPersistence !== undefined ? Number(maxPersistence) : null,
+        hasCoordinates: hasCoordinates !== undefined ? String(hasCoordinates) : null,
+        radiusKm: radiusThreshold
       },
       data: items
     };
   }
 
-  getEventById(id) {
+  getEventById(id, options = {}) {
     const numId = Number(id);
-    return this.eventsById.get(numId) || null;
+    const event = this.eventsById.get(numId);
+    if (!event) return null;
+    return spatialCorrelationService.correlateEvent(event, options);
   }
 
   getEventStats() {
     return this.precomputedStats;
+  }
+
+  /**
+   * Generates a valid GeoJSON FeatureCollection of Point features for all events
+   * that contain authentic, validated geographic coordinates with attached spatial_context.
+   * @param {Object} filters
+   * @returns {Object} RFC 7946 FeatureCollection
+   */
+  getEventsGeoJSON(filters = {}) {
+    const {
+      classification,
+      minConfidence,
+      maxConfidence,
+      minPersistence,
+      maxPersistence,
+      minFrp,
+      bbox,
+      limit = 1000,
+      radiusKm = 10.0
+    } = filters;
+
+    let parsedBBox = null;
+    if (bbox) {
+      const bboxResult = parseBBox(bbox);
+      if (bboxResult.valid) {
+        parsedBBox = bboxResult.bbox;
+      }
+    }
+
+    const minConf = minConfidence !== undefined ? Number(minConfidence) : null;
+    const maxConf = maxConfidence !== undefined ? Number(maxConfidence) : null;
+    const minPers = minPersistence !== undefined ? Number(minPersistence) : null;
+    const maxPers = maxPersistence !== undefined ? Number(maxPersistence) : null;
+    const minF = minFrp !== undefined ? Number(minFrp) : null;
+    const clsLower = classification ? classification.toLowerCase() : null;
+    const maxLimit = Math.min(5000, Math.max(1, Number(limit) || 1000));
+    const radiusThreshold = Number(radiusKm) > 0 ? Number(radiusKm) : 10.0;
+
+    const features = [];
+    let countWithCoords = 0;
+    let countWithoutCoords = 0;
+
+    for (let i = 0; i < this.events.length; i++) {
+      const e = this.events[i];
+      if (e.has_coordinates) {
+        countWithCoords++;
+      } else {
+        countWithoutCoords++;
+        continue;
+      }
+
+      // Filter classification
+      if (clsLower) {
+        const matchFireType = e.fire_type && e.fire_type.toLowerCase().includes(clsLower);
+        const matchPredClass = e.prediction_class && e.prediction_class.toLowerCase() === clsLower;
+        if (!matchFireType && !matchPredClass) continue;
+      }
+
+      // Confidence
+      const conf = e.confidence !== undefined ? Number(e.confidence) : e.prediction_confidence;
+      if (minConf !== null && !isNaN(minConf) && conf < minConf) continue;
+      if (maxConf !== null && !isNaN(maxConf) && conf > maxConf) continue;
+
+      // Persistence
+      if (minPers !== null && !isNaN(minPers) && e.persistence_days < minPers) continue;
+      if (maxPers !== null && !isNaN(maxPers) && e.persistence_days > maxPers) continue;
+
+      // FRP
+      const currentFrp = e.frp || e.avg_frp || 0;
+      if (minF !== null && !isNaN(minF) && (currentFrp < minF && e.max_frp < minF)) continue;
+
+      // Bounding box filter
+      if (parsedBBox && !isPointInBBox(e.longitude, e.latitude, parsedBBox)) continue;
+
+      // Real spatial correlation calculation for georeferenced event
+      const enrichedEvent = spatialCorrelationService.correlateEvent(e, { radiusKm: radiusThreshold });
+      const feat = e.toGeoJSON();
+      if (feat) {
+        feat.properties.spatial_context = enrichedEvent.spatial_context;
+        if (features.length < maxLimit) {
+          features.push(feat);
+        }
+      }
+    }
+
+    const notice = countWithCoords > 0
+      ? `GeoJSON FeatureCollection contains ${features.length} genuine georeferenced fire events with spatial infrastructure correlation.`
+      : 'Authoritative thermal observation dataset (fire_dataset.csv.xls) does not contain native coordinates (latitude/longitude). In accordance with strict data integrity rules, synthetic coordinates are not fabricated. Verified infrastructure coordinates are exposed via /api/infrastructure.';
+
+    return createFeatureCollection(features, {
+      totalEvents: this.events.length,
+      eventsWithCoordinates: countWithCoords,
+      eventsWithoutCoordinates: countWithoutCoords,
+      featuresCount: features.length,
+      dataset: this.eventsPath ? path.basename(this.eventsPath) : 'in_memory',
+      notice,
+      filters: {
+        classification: classification || null,
+        minConfidence: minConf,
+        maxConfidence: maxConf,
+        minPersistence: minPers,
+        maxPersistence: maxPers,
+        minFrp: minF,
+        bbox: bbox || null,
+        limit: maxLimit,
+        radiusKm: radiusThreshold
+      }
+    });
+  }
+
+  /**
+   * Generates a spatial-temporal signature for an event to support O(1) deduplication.
+   * @param {Event} event
+   * @returns {string}
+   */
+  getEventSignature(event) {
+    if (!event || event.latitude === null || event.longitude === null) {
+      return `legacy_${event?.id || Math.random()}`;
+    }
+    const latStr = Number(event.latitude).toFixed(4);
+    const lonStr = Number(event.longitude).toFixed(4);
+    const dateStr = event.acquisition_date || '';
+    const timeStr = event.acquisition_time || '';
+    const satStr = (event.satellite || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return `${latStr}_${lonStr}_${dateStr}_${timeStr}_${satStr}`;
+  }
+
+  hasEventSignature(signature) {
+    return this.eventSignatures.has(signature);
+  }
+
+  /**
+   * Appends newly ingested genuine events to the in-memory repository with deduplication and stats update.
+   * @param {Array<Event>} newEvents
+   * @returns {Object} { added: number, duplicates: number, totalEvents: number, addedEvents: Array }
+   */
+  addEvents(newEvents = []) {
+    const addedEvents = [];
+    let duplicatesCount = 0;
+
+    for (const evt of newEvents) {
+      const eventInstance = evt instanceof Event ? evt : new Event(evt);
+      const sig = this.getEventSignature(eventInstance);
+
+      if (this.eventSignatures.has(sig)) {
+        duplicatesCount++;
+        continue;
+      }
+
+      this.eventSignatures.add(sig);
+      this.events.push(eventInstance);
+      this.eventsById.set(eventInstance.id, eventInstance);
+      addedEvents.push(eventInstance);
+
+      if (eventInstance.has_coordinates) {
+        this.eventsWithCoordinatesCount++;
+      } else {
+        this.eventsWithoutCoordinatesCount++;
+      }
+    }
+
+    this.computeGlobalStats();
+    return {
+      added: addedEvents.length,
+      duplicates: duplicatesCount,
+      totalEvents: this.events.length,
+      eventsWithCoordinates: this.eventsWithCoordinatesCount,
+      addedEvents
+    };
   }
 
   getInfrastructure(filters = {}, pagination = { page: 1, limit: 50 }) {
@@ -472,15 +799,31 @@ class CsvRepository {
     };
   }
 
+  calculateSpatialContext(lat, lon, options = {}) {
+    return spatialCorrelationService.calculateSpatialContext(lat, lon, options);
+  }
+
+  findNearbyInfrastructure(lat, lon, radiusKm = 10.0, options = {}) {
+    return spatialCorrelationService.getFeaturesWithinRadius(lat, lon, radiusKm, options);
+  }
+
   getStatus() {
     return {
       isLoaded: this.isLoaded,
       eventsCount: this.events.length,
+      eventsWithCoordinatesCount: this.eventsWithCoordinatesCount,
+      eventsWithoutCoordinatesCount: this.eventsWithoutCoordinatesCount,
       infrastructureCount: this.infrastructure.length,
+      spatialIndex: {
+        isIndexed: spatialCorrelationService.isIndexed,
+        totalIndexedGeometries: spatialCorrelationService.totalIndexed,
+        categoriesCount: spatialCorrelationService.categories.size
+      },
       mode: 'csv_repository',
       files: {
         events: this.eventsPath,
-        infrastructure: this.infraPath
+        infrastructure: this.infraPath,
+        canonicalFirms: this.canonicalFirmsPath || null
       }
     };
   }
