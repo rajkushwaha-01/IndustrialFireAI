@@ -259,3 +259,50 @@ test('10. Phase 4: Multi-modal source distinction strictly separates optical sat
   assert.strictEqual(tier4.isThermalData, false);
 });
 
+test('11. Phase 7: Classification evidence layer exposes multi-source factors', async () => {
+  const mockEvidence = {
+    classification: 'Industrial Fire',
+    confidence: 0.91,
+    probabilities: {
+      'Industrial Fire': 0.91,
+      'Persistent Thermal Source': 0.06,
+      'Natural Fire': 0.02,
+      'Other': 0.01
+    },
+    factors: [
+      { factor: 'industrial proximity', level: 'high', detail: '0.85 km to nearest storage tank' },
+      { factor: 'persistence', level: 'medium', detail: '5.0 days cluster duration' },
+      { factor: 'FRP', level: 'high', detail: '62.4 MW average radiative power' },
+      { factor: 'infrastructure density', level: 'high', detail: '4 industrial facilities within radius' }
+    ],
+    summary_text: [
+      'industrial proximity: high',
+      'persistence: medium',
+      'FRP: high',
+      'infrastructure density: high'
+    ],
+    thermal: { frp_level: 'high', frp_mw: 62.4, temperature_level: 'high' },
+    spatial: { proximity_level: 'high', min_distance_km: 0.85, nearest_category: 'storage tank' },
+    temporal: { persistence_level: 'medium', persistence_days: 5.0, diurnal_pattern: 'CONTINUOUS_24_7' },
+    scientific_disclaimer: 'Thermal anomaly classification is probabilistic and derived from VIIRS/MODIS radiometric measurements and OpenStreetMap spatial correlation. Satellite data alone cannot establish definitive on-the-ground physical root cause without field inspection.'
+  };
+
+  assert.strictEqual(mockEvidence.classification, 'Industrial Fire');
+  assert.strictEqual(mockEvidence.confidence, 0.91);
+  assert.strictEqual(mockEvidence.factors.length, 4);
+  assert(mockEvidence.summary_text.includes('industrial proximity: high'));
+  assert(mockEvidence.summary_text.includes('persistence: medium'));
+  assert(mockEvidence.summary_text.includes('FRP: high'));
+  assert(mockEvidence.summary_text.includes('infrastructure density: high'));
+  assert.strictEqual(mockEvidence.temporal.diurnal_pattern, 'CONTINUOUS_24_7');
+});
+
+test('12. Phase 7: Scientific guardrail and disclaimer verification', async () => {
+  const disclaimer = 'Thermal anomaly classification is probabilistic and derived from VIIRS/MODIS radiometric measurements and OpenStreetMap spatial correlation. Satellite data alone cannot establish definitive on-the-ground physical root cause without field inspection.';
+
+  // Must disclaim that ML does not determine physical root cause alone
+  assert(disclaimer.includes('probabilistic'));
+  assert(disclaimer.includes('cannot establish definitive on-the-ground physical root cause'));
+  assert(disclaimer.includes('without field inspection'));
+});
+

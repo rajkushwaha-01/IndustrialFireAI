@@ -125,11 +125,12 @@ async function runTests() {
     assert.strictEqual(res.status, 200);
     const data = await res.json();
     assert.strictEqual(data.model_type, 'RandomForestClassifier');
-    assert.strictEqual(data.n_estimators, 200);
+    assert(data.n_estimators >= 100);
+    assert.strictEqual(data.version, '2.0.0');
     assert.strictEqual(data.feature_names.length, 14);
   });
 
-  // 11. Predict (ML proxy)
+  // 11. Predict (ML proxy with Phase 7 Evidence)
   await test('POST /predict proxies inference to ML service', async () => {
     const sample = {
       persistence_days: 77.0,
@@ -158,6 +159,8 @@ async function runTests() {
     assert.strictEqual(data.prediction, 'Industrial Fire');
     assert(data.confidence > 0.5);
     assert(data.probabilities['Industrial Fire'] > 0.5);
+    assert(data.evidence !== undefined);
+    assert(Array.isArray(data.evidence.factors));
   });
 
   // 12. Predict validation error

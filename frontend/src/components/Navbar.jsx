@@ -24,6 +24,7 @@ export default function Navbar({ backendHealth, mlHealth }) {
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Map', path: '/map', icon: MapIcon },
     { name: 'Events', path: '/events', icon: ListFilter },
+    { name: 'Investigation', path: '/investigate', icon: Activity },
     { name: 'Analytics', path: '/analytics', icon: BarChart3 },
     { name: 'Data Sources', path: '/data-sources', icon: Database },
     { name: 'About', path: '/about', icon: Info },

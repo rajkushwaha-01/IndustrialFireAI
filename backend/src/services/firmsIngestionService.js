@@ -530,6 +530,7 @@ class FirmsIngestionService {
           max_lon: Math.round(maxLon * 1000) / 1000
         } : null,
         source: sourceLabel,
+        inserted_ids: storedEvents.map((e) => e.id),
         error_samples: invalidRecords.slice(0, 10)
       };
 

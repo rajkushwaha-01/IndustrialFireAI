@@ -76,10 +76,12 @@ def test_model_info_endpoint():
     assert response.status_code == 200
     data = response.json()
     assert data["model_type"] == "RandomForestClassifier"
-    assert data["n_estimators"] == 200
+    assert data["n_estimators"] == 150
     assert len(data["feature_names"]) == 14
     assert data["feature_names"] == ORDERED_FEATURE_NAMES
     assert len(data["classes"]) == 4
+    assert data["version"] == "2.0.0"
+    assert data["evaluation"] is not None
 
 def test_predict_industrial_fire_sample():
     response = client.post("/predict", json=REAL_SAMPLE_INDUSTRIAL_FIRE)
@@ -103,6 +105,33 @@ def test_predict_industrial_fire_sample():
     }
     total_prob = sum(probs.values())
     assert abs(total_prob - 1.0) < 0.01
+
+    # Phase 7: Classification Evidence Layer assertions
+    assert "evidence" in data
+    ev = data["evidence"]
+    assert "scientific_disclaimer" in ev
+    assert len(ev["factors"]) >= 4
+    assert ev["thermal"]["frp_level"] in ["HIGH", "MEDIUM", "LOW", "NEGLIGIBLE"]
+    assert ev["spatial"]["proximity_level"] in ["HIGH", "MEDIUM", "LOW", "NEGLIGIBLE"]
+    assert ev["temporal"]["persistence_level"] in ["HIGH", "MEDIUM", "LOW"]
+    assert any("industrial proximity:" in s for s in ev["summary_text"])
+
+def test_scientific_guardrail_remote_fire_not_claimed_as_industrial():
+    # Construct a sample that has high FRP but is 50km remote from any industry
+    remote_sample = REAL_SAMPLE_INDUSTRIAL_FIRE.copy()
+    remote_sample["distance_to_industrial_area_km"] = 55.0
+    remote_sample["distance_to_power_plant_km"] = 60.0
+    remote_sample["distance_to_quarry_km"] = 45.0
+    remote_sample["distance_to_substation_km"] = 70.0
+    remote_sample["distance_to_storage_tank_km"] = 80.0
+    remote_sample["distance_to_works_km"] = 65.0
+    
+    response = client.post("/predict", json=remote_sample)
+    assert response.status_code == 200
+    data = response.json()
+    # Guardrail prevents classifying remote wilderness fire as Industrial Fire
+    assert data["prediction"] != "Industrial Fire"
+    assert data["evidence"]["spatial"]["proximity_level"] in ["LOW", "NEGLIGIBLE"]
 
 def test_predict_persistent_source_sample():
     response = client.post("/predict", json=REAL_SAMPLE_PERSISTENT_SOURCE)

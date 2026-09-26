@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 import pandas as pd
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Response
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -14,13 +14,19 @@ from .schemas import (
     HealthResponse, 
     ORDERED_FEATURE_NAMES
 )
+from .evidence import compute_evidence
 
 load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Pre-load authoritative model during server startup
+    # Pre-load and validate authoritative model during server startup
     load_model()
+    metadata = get_metadata()
+    if metadata["loaded"]:
+        print(f"[STARTUP VALIDATION OK] Model '{metadata['model_type']}' v{metadata['version']} loaded with {metadata['n_features']} features.")
+    else:
+        print(f"[STARTUP VALIDATION FAILED] Model failed to load: {metadata.get('error')}")
     yield
 
 app = FastAPI(
@@ -54,11 +60,14 @@ def read_root():
     }
 
 @app.get("/health", response_model=HealthResponse)
-def get_health():
+def get_health(response: Response):
     metadata = get_metadata()
     if not metadata["loaded"]:
         load_model()
         metadata = get_metadata()
+
+    if not metadata["loaded"]:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return HealthResponse(
         status="ok" if metadata["loaded"] else "degraded",
@@ -88,7 +97,13 @@ def get_model_info():
         model_type=metadata["model_type"] or "RandomForestClassifier",
         n_estimators=metadata["n_estimators"],
         feature_names=metadata["feature_names"],
-        classes=metadata["classes"]
+        classes=metadata["classes"],
+        version=metadata.get("version", "2.0.0"),
+        trained_at=metadata.get("trained_at"),
+        hyperparameters=metadata.get("hyperparameters"),
+        evaluation=metadata.get("evaluation"),
+        feature_importances=metadata.get("feature_importances"),
+        dataset_summary=metadata.get("dataset_summary")
     )
 
 @app.post("/predict", response_model=PredictResponse)
@@ -119,10 +134,20 @@ def predict_fire_type(payload: FireFeaturesInput):
             for cls, prob in zip(model.classes_, probabilities)
         }
 
-        return PredictResponse(
-            prediction=predicted_class,
-            confidence=round(confidence, 6),
+        # Compute multi-source classification evidence layer
+        features_dict = payload.model_dump()
+        evidence = compute_evidence(
+            features=features_dict,
+            raw_prediction=predicted_class,
+            confidence=confidence,
             probabilities=prob_dict
+        )
+
+        return PredictResponse(
+            prediction=evidence.classification,
+            confidence=evidence.confidence,
+            probabilities=prob_dict,
+            evidence=evidence.model_dump()
         )
     except Exception as e:
         raise HTTPException(

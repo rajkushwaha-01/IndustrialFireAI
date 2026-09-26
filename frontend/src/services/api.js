@@ -75,6 +75,30 @@ export async function fetchSpatialCorrelation(lat, lon, radiusKm = 10) {
 }
 
 /**
+ * Fetch nearby infrastructure for given coordinate
+ */
+export async function fetchNearbyInfrastructure(lat, lon, radiusKm = 10, limit = 50) {
+  const res = await apiClient.get(`/events/nearby-infrastructure?lat=${lat}&lon=${lon}&radius=${radiusKm}&limit=${limit}`);
+  return res.data;
+}
+
+/**
+ * Fetch ML Model Info
+ */
+export async function fetchModelInfo() {
+  const res = await apiClient.get('/model-info');
+  return res.data;
+}
+
+/**
+ * Run ML Inference with probability output
+ */
+export async function runPredict(payload) {
+  const res = await apiClient.post('/predict', payload);
+  return res.data;
+}
+
+/**
  * Fetch system health
  */
 export async function fetchHealth() {
@@ -90,6 +114,9 @@ export default {
   fetchEvents,
   fetchEventById,
   fetchInfrastructureGeoJSON,
+  fetchNearbyInfrastructure,
   fetchSpatialCorrelation,
+  fetchModelInfo,
+  runPredict,
   fetchHealth
 };

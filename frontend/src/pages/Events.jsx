@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import PageContainer from '../components/PageContainer';
 import SectionHeader from '../components/SectionHeader';
@@ -32,11 +32,14 @@ import {
 } from 'lucide-react';
 
 export default function Events() {
+  const [searchParams] = useSearchParams();
+
   // Query parameters state
   const [search, setSearch] = useState('');
-  const [classification, setClassification] = useState('');
-  const [minConfidence, setMinConfidence] = useState('');
-  const [minPersistence, setMinPersistence] = useState('');
+  const [classification, setClassification] = useState(searchParams.get('classification') || '');
+  const [minConfidence, setMinConfidence] = useState(searchParams.get('minConfidence') || '');
+  const [minPersistence, setMinPersistence] = useState(searchParams.get('minPersistence') || '');
+  const [hasCoordinates, setHasCoordinates] = useState(searchParams.get('hasCoordinates') || '');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
 
@@ -49,6 +52,7 @@ export default function Events() {
   // Modal / Detail state
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [detailProbabilities, setDetailProbabilities] = useState(null);
+  const [detailEvidence, setDetailEvidence] = useState(null);
   const [loadingInference, setLoadingInference] = useState(false);
 
   // Fetch events list from backend
@@ -63,6 +67,7 @@ export default function Events() {
       if (classification) params.append('classification', classification);
       if (minConfidence) params.append('minConfidence', minConfidence);
       if (minPersistence) params.append('minPersistence', minPersistence);
+      if (hasCoordinates) params.append('hasCoordinates', hasCoordinates);
 
       const res = await axios.get(`http://localhost:5000/api/events?${params.toString()}`, { timeout: 6000 });
       if (res.data) {
@@ -78,9 +83,20 @@ export default function Events() {
   };
 
   useEffect(() => {
+    const cls = searchParams.get('classification') || '';
+    const minC = searchParams.get('minConfidence') || '';
+    const minP = searchParams.get('minPersistence') || '';
+    const hasC = searchParams.get('hasCoordinates') || '';
+    setClassification(cls);
+    setMinConfidence(minC);
+    setMinPersistence(minP);
+    setHasCoordinates(hasC);
+  }, [searchParams]);
+
+  useEffect(() => {
     fetchEvents(1);
     setPage(1);
-  }, [classification, minConfidence, minPersistence, limit]);
+  }, [classification, minConfidence, minPersistence, hasCoordinates, limit]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -100,6 +116,7 @@ export default function Events() {
   const handleOpenDetail = async (evt) => {
     setSelectedEvent(evt);
     setDetailProbabilities(null);
+    setDetailEvidence(evt.evidence || null);
     setLoadingInference(true);
 
     try {
@@ -123,6 +140,9 @@ export default function Events() {
       const res = await axios.post('http://localhost:5000/api/predict', payload, { timeout: 4000 });
       if (res.data?.probabilities) {
         setDetailProbabilities(res.data.probabilities);
+      }
+      if (res.data?.evidence) {
+        setDetailEvidence(res.data.evidence);
       }
     } catch (err) {
       console.warn('Could not fetch dynamic probability breakdown:', err.message);
@@ -525,6 +545,141 @@ export default function Events() {
               )}
             </div>
 
+            {/* Phase 7: Multi-Source Classification Evidence Layer */}
+            {detailEvidence && (
+              <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950 text-white rounded-2xl border border-slate-700/80 p-4 space-y-3.5 shadow-md">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-sky-400" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                      Multi-Source Classification Evidence
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-sans">
+                      Calibrated Confidence:
+                    </span>
+                    <span className="text-xs font-mono font-bold text-sky-300 bg-sky-950/80 px-2 py-0.5 rounded border border-sky-800">
+                      {detailEvidence.confidence !== undefined ? `${(detailEvidence.confidence * 100).toFixed(1)}%` : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Evidence Factors Pills (Phase 7 exact requirement) */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">
+                    Contributing Evidence Factors:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {detailEvidence.factors?.map((f, idx) => {
+                      const levelUpper = (f.level || '').toUpperCase();
+                      const isHigh = levelUpper === 'HIGH';
+                      const isMed = levelUpper === 'MEDIUM';
+                      return (
+                        <div
+                          key={idx}
+                          className="bg-slate-800/80 border border-slate-700 rounded-xl p-2 flex flex-col justify-between"
+                        >
+                          <span className="text-[10px] capitalize text-slate-400 block font-medium truncate">
+                            {f.factor}
+                          </span>
+                          <div className="flex items-center justify-between mt-1">
+                            <span
+                              className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                                isHigh
+                                  ? 'bg-red-950 text-red-300 border border-red-800'
+                                  : isMed
+                                  ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                                  : 'bg-slate-700 text-slate-300 border border-slate-600'
+                              }`}
+                            >
+                              {f.level}
+                            </span>
+                          </div>
+                          <span className="text-[9px] text-slate-400 mt-1 font-mono truncate" title={f.detail}>
+                            {f.detail}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Detailed 3-Pillar Telemetry Summary */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] pt-1 border-t border-slate-800/80">
+                  {/* Thermal Pillar */}
+                  <div className="bg-slate-800/50 p-2 rounded-xl border border-slate-700/60 space-y-1">
+                    <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider block">
+                      🔥 Thermal Evidence
+                    </span>
+                    <div className="text-slate-300 flex justify-between">
+                      <span className="text-slate-400">Radiative Power:</span>
+                      <span className="font-mono text-orange-200">{detailEvidence.thermal?.frp_mw} MW</span>
+                    </div>
+                    <div className="text-slate-300 flex justify-between">
+                      <span className="text-slate-400">Brightness Temp:</span>
+                      <span className="font-mono text-orange-200">{detailEvidence.thermal?.brightness_kelvin} K</span>
+                    </div>
+                    <div className="text-slate-300 flex justify-between">
+                      <span className="text-slate-400">Scans:</span>
+                      <span className="font-mono text-orange-200">{detailEvidence.thermal?.detections} detections</span>
+                    </div>
+                  </div>
+
+                  {/* Spatial Pillar */}
+                  <div className="bg-slate-800/50 p-2 rounded-xl border border-slate-700/60 space-y-1">
+                    <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider block">
+                      📍 Spatial Evidence
+                    </span>
+                    <div className="text-slate-300 flex justify-between">
+                      <span className="text-slate-400">Min Distance:</span>
+                      <span className="font-mono text-sky-200">{detailEvidence.spatial?.min_distance_km} km</span>
+                    </div>
+                    <div className="text-slate-300 flex justify-between">
+                      <span className="text-slate-400">Nearest Asset:</span>
+                      <span className="font-mono text-sky-200 capitalize truncate max-w-[90px]">{detailEvidence.spatial?.nearest_category}</span>
+                    </div>
+                    <div className="text-slate-300 flex justify-between">
+                      <span className="text-slate-400">Cluster Density:</span>
+                      <span className="font-mono text-sky-200">{detailEvidence.spatial?.density_level?.toUpperCase()}</span>
+                    </div>
+                  </div>
+
+                  {/* Temporal Pillar */}
+                  <div className="bg-slate-800/50 p-2 rounded-xl border border-slate-700/60 space-y-1">
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+                      ⏱ Temporal Evidence
+                    </span>
+                    <div className="text-slate-300 flex justify-between">
+                      <span className="text-slate-400">Persistence:</span>
+                      <span className="font-mono text-emerald-200">{detailEvidence.temporal?.persistence_days} Days</span>
+                    </div>
+                    <div className="text-slate-300 flex justify-between">
+                      <span className="text-slate-400">Night Ratio:</span>
+                      <span className="font-mono text-emerald-200">{Math.round((detailEvidence.temporal?.night_ratio || 0) * 100)}%</span>
+                    </div>
+                    <div className="text-slate-300 flex justify-between">
+                      <span className="text-slate-400">Pattern:</span>
+                      <span className="font-mono text-emerald-200 text-[10px]">{detailEvidence.temporal?.diurnal_pattern}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Guardrail Note if triggered */}
+                {detailEvidence.guardrail_note && (
+                  <div className="p-2 bg-amber-950/70 border border-amber-800/80 rounded-xl text-[11px] text-amber-200 flex items-start gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                    <span><strong>Scientific Guardrail:</strong> {detailEvidence.guardrail_note}</span>
+                  </div>
+                )}
+
+                {/* Scientific Disclaimer */}
+                <div className="p-2 bg-slate-950/60 border border-slate-800 rounded-xl text-[10px] text-slate-400 italic">
+                  🛡 <strong>Scientific Disclaimer:</strong> {detailEvidence.scientific_disclaimer}
+                </div>
+              </div>
+            )}
+
             {/* Core Satellite Thermal & Radiative Metrics */}
             <div>
               <span className="text-xs font-bold text-slate-900 uppercase tracking-wide block mb-2.5">
@@ -631,10 +786,14 @@ export default function Events() {
               <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[10px] text-slate-500 leading-relaxed">
                 <strong className="text-slate-700">Observational Integrity Note:</strong> All 14 input features displayed above originate directly from verified observations in <code className="font-mono text-slate-800">data/fire_dataset.csv.xls</code>. Live ML probabilities are generated dynamically on port 8000. Never call synthetic/demo data real satellite observations.
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-slate-400">
-                  Verified dataset record #{selectedEvent.id}
-                </span>
+              <div className="flex items-center justify-between gap-3">
+                <Link
+                  to={`/investigate/${selectedEvent.id}`}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-geo-700 hover:bg-geo-800 text-white rounded-xl text-xs font-semibold transition-colors shadow-xs"
+                >
+                  <Activity className="w-3.5 h-3.5 text-white/90" />
+                  <span>Open Full Investigation Page</span>
+                </Link>
                 <button
                   onClick={() => setSelectedEvent(null)}
                   className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-colors shadow-xs"

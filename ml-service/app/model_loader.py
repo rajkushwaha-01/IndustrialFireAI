@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import joblib
@@ -11,6 +12,12 @@ MODEL_METADATA = {
     "classes": [],
     "feature_names": [],
     "n_features": 0,
+    "version": "2.0.0",
+    "trained_at": None,
+    "hyperparameters": None,
+    "evaluation": None,
+    "feature_importances": None,
+    "dataset_summary": None,
     "path": None,
     "error": None
 }
@@ -63,6 +70,23 @@ def load_model():
         print(f"[INFO] Authoritative RandomForestClassifier loaded from {model_path}")
         print(f"[INFO] Classes ({len(MODEL_METADATA['classes'])}): {MODEL_METADATA['classes']}")
         print(f"[INFO] Estimators: {MODEL_METADATA['n_estimators']}, Features: {MODEL_METADATA['n_features']}")
+
+        # Attempt to load rich metadata JSON if available
+        meta_json_path = model_path.parent / "model_metadata.json"
+        if meta_json_path.exists():
+            try:
+                with open(meta_json_path, "r", encoding="utf-8") as f:
+                    meta_data = json.load(f)
+                MODEL_METADATA["version"] = meta_data.get("model_version", "2.0.0")
+                MODEL_METADATA["trained_at"] = meta_data.get("trained_at")
+                MODEL_METADATA["hyperparameters"] = meta_data.get("hyperparameters")
+                MODEL_METADATA["evaluation"] = meta_data.get("evaluation")
+                MODEL_METADATA["feature_importances"] = meta_data.get("features", {}).get("importances")
+                MODEL_METADATA["dataset_summary"] = meta_data.get("dataset")
+                print(f"[INFO] Loaded model metadata v{MODEL_METADATA['version']} from {meta_json_path}")
+            except Exception as meta_err:
+                print(f"[WARNING] Could not load model_metadata.json: {meta_err}")
+
         return MODEL
     except Exception as e:
         MODEL_METADATA["loaded"] = False

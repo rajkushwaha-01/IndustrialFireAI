@@ -36,3 +36,6 @@ Thumbs.db
 # Large Model Binaries (>100MB)
 # Note: In production or remote Git pushes, use Git LFS for ml-service/model/fire_type_model.pkl (208 MB)
 # or download it during CI/CD from secure artifact storage.
+
+# Legacy ML model - too large for GitHub
+ml-service/model/fire_type_model_legacy_v1.pkl

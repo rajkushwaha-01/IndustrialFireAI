@@ -8,6 +8,7 @@ import Events from './pages/Events';
 import Analytics from './pages/Analytics';
 import DataSources from './pages/DataSources';
 import About from './pages/About';
+import Investigation from './pages/Investigation';
 import { DESIGN_TOKENS } from './theme/tokens';
 
 export default function App() {
@@ -67,6 +68,9 @@ export default function App() {
             />
             <Route path="/map" element={<MapView />} />
             <Route path="/events" element={<Events />} />
+            <Route path="/events/:id" element={<Investigation />} />
+            <Route path="/investigate" element={<Investigation />} />
+            <Route path="/investigate/:id" element={<Investigation />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/data-sources" element={<DataSources />} />
             <Route path="/datasources" element={<DataSources />} />

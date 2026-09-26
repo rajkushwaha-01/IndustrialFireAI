@@ -4,8 +4,14 @@
 
 **Organization:** National Technical Research Organisation (NTRO)  
 **Problem Statement ID:** 26162  
-**Phase:** Phase 10 Complete - Final Integration, Hardening & SIH Prototype Release  
+**Phase:** Phase 12 Complete - SIH Demonstration & Evaluation Release  
 **Status:** Production-Ready Geospatial Intelligence System
+
+> **SIH 2024 Evaluator Resources:**
+> - 📘 **[SIH Demonstration Guide (13-Step Flow)](file:///c:/Users/rajku/Desktop/SIH-PS-2/IndustrialFireAI/docs/SIH_DEMO_GUIDE.md)**
+> - 📐 **[System Architecture & Technical Specifications](file:///c:/Users/rajku/Desktop/SIH-PS-2/IndustrialFireAI/docs/SIH_ARCHITECTURE.md)**
+> - 🧪 **[Quality Assurance & Verification Test Report](file:///c:/Users/rajku/Desktop/SIH-PS-2/IndustrialFireAI/docs/TEST_REPORT.md)**
+> - 📊 **[Authoritative ML Model Card](file:///c:/Users/rajku/Desktop/SIH-PS-2/IndustrialFireAI/docs/ML_MODEL_CARD.md)**
 
 ---
 
@@ -65,16 +71,73 @@ flowchart TD
 
 ## 2. Technology Stack & Port Allocations
 
-| Component | Technology Stack | Port | Primary Endpoint / Health URL |
-|---|---|---|---|
-| **Frontend** | React 18, Vite 6, Tailwind CSS 3, Leaflet, Recharts, Lucide | `5173` | [http://localhost:5173](http://localhost:5173) |
-| **Backend API** | Node.js 24, Express 4, Axios, Morgan, Dotenv | `5000` | [http://localhost:5000/api/health](http://localhost:5000/api/health) |
-| **ML Service** | Python 3.14, FastAPI, scikit-learn 1.9, joblib, Pydantic | `8000` | [http://localhost:8000/health](http://localhost:8000/health) |
-| **Database** | PostgreSQL 16 + PostGIS 3.4 (with automatic CSV fallback) | `5432` | `docker compose up -d db` |
+| Component | Technology Stack | Container Port | Host Port | Primary Endpoint / Health URL |
+|---|---|---|---|---|
+| **Frontend** | React 18, Vite 6, Tailwind CSS 3, Leaflet, Nginx 1.27 Alpine | `80` | `3000` | [http://localhost:3000](http://localhost:3000) |
+| **Backend API** | Node.js 20 Alpine, Express 4, Axios, Morgan, Dotenv | `5000` | `5000` | [http://localhost:5000/api/health](http://localhost:5000/api/health) |
+| **ML Service** | Python 3.11 Slim, FastAPI, scikit-learn 1.9, joblib, Pydantic | `8000` | `8000` | [http://localhost:8000/health](http://localhost:8000/health) |
+| **Database** | PostgreSQL 16 + PostGIS 3.4 (persistent storage volume) | `5432` | `5432` | `localhost:5432` (`industrial_fire_db`) |
 
 ---
 
-## 3. Step-by-Step Installation & Setup
+## 3. Quickstart: Reproducible Docker Deployment (Recommended)
+
+The entire IndustrialFireAI stack can be built and deployed reproducibly across Linux, macOS, and Windows with a single Docker Compose workflow.
+
+### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/) & Docker Compose (v2.20+ or Docker Desktop)
+
+### Deployment Steps
+
+```bash
+# 1. Clone repository
+git clone https://github.com/organization/IndustrialFireAI.git
+cd IndustrialFireAI
+
+# 2. Configure environment variables (template provided, no secrets committed)
+cp .env.example .env
+
+# 3. Build production images (Frontend Nginx multi-stage, Backend, ML service)
+docker compose build
+
+# 4. Launch all 4 services with automatic dependency resolution and health checks
+docker compose up -d
+
+# 5. Verify service health status
+docker compose ps
+```
+
+### Health Verification & Endpoints
+
+| Service | Target URL | Expected Output |
+|---|---|---|
+| **Frontend Web App** | [http://localhost:3000](http://localhost:3000) | Full SPA React Command Center |
+| **Frontend Health** | [http://localhost:3000/health](http://localhost:3000/health) | `OK` |
+| **Backend API Health** | [http://localhost:5000/api/health](http://localhost:5000/api/health) | `{"status":"healthy","services":{"mlService":{"status":"ok"}}}` |
+| **ML Inference Health** | [http://localhost:8000/health](http://localhost:8000/health) | `{"status":"ok","model_loaded":true}` |
+| **Nginx Proxy to API** | [http://localhost:3000/api/health](http://localhost:3000/api/health) | Transparent reverse proxy to Backend API |
+| **Live In-Docker Prediction** | `POST http://localhost:5000/api/predict` | Probabilistic classification + 4-evidence breakdown |
+
+### Service Architecture & Dependencies in Docker Compose
+- **Startup Validation:** The ML inference service pre-loads and validates `fire_type_model.pkl` on container lifespan startup; if invalid or missing, healthchecks return HTTP 503.
+- **Service Dependency Sequencing:** The Node Express `backend` waits for both `db` and `ml-service` to reach healthy status before accepting client traffic.
+- **Frontend Nginx Reverse Proxy:** Nginx serves the compiled production SPA on port 80 and reverse-proxies `/api/` requests internally to `backend:5000`, eliminating cross-origin issues.
+- **Database Storage & Schema Migrations:** PostGIS volume (`industrial_fire_postgis_data`) is persistent across container restarts. `database/schema.sql` automatically runs on initial volume creation to create spatial tables and GIST indices.
+
+### Teardown
+```bash
+# Stop containers while preserving database volume
+docker compose down
+
+# Stop containers and purge database volume for a clean slate
+docker compose down -v
+```
+
+---
+
+## 4. Manual Local Development Setup (Alternative)
+
+For iterative local code changes without Docker:
 
 ### Step 1: Clone Repository & Install Dependencies
 
@@ -161,9 +224,9 @@ npm run dev
 
 ---
 
-## 4. Evaluator Demo Instructions (Demo Mode)
+## 5. Evaluator Demo Instructions (Demo Mode)
 
-The application includes an **Evaluator Demo Mode** in the Events Explorer ([http://localhost:5173/events](http://localhost:5173/events)) with 1-click presets based directly on the authoritative dataset:
+The application includes an **Evaluator Demo Mode** in the Events Explorer ([http://localhost:3000/events](http://localhost:3000/events)) with 1-click presets based directly on the authoritative dataset:
 
 1. Navigate to **Events** via the Top Navigation Bar.
 2. In the **Demo Mode: Evaluator Dataset Presets** banner, click any preset:
@@ -171,13 +234,13 @@ The application includes an **Evaluator Demo Mode** in the Events Explorer ([htt
    - **⚡ Persistent Source Preset:** Filters to stationary high-temperature sources (brick kilns, smelters) with $\ge 15$ days persistence.
    - **🌿 Natural Fire Preset:** Filters to short-duration vegetation/stubble fires with $\ge 85\%$ confidence.
 3. Click on any event row to open the **Live ML Inspector Modal**.
-4. The system executes a live HTTP request to `POST /api/predict`, feeding the 14 authentic parameters to the 200-tree Random Forest model on port 8000, returning the real-time probability breakdown (e.g. 96% Industrial Fire, 3% Persistent Source).
+4. The system executes a live HTTP request to `POST /api/predict`, feeding the 14 authentic parameters to the Random Forest model on port 8000, returning the real-time probability breakdown (e.g. 96% Industrial Fire, 3% Persistent Source).
 
 > **Observational Integrity Notice:** All demo presets and event records originate from authoritative observations in `data/fire_dataset.csv.xls`. Never call synthetic or demo data real satellite observations.
 
 ---
 
-## 5. API Reference & Contract Documentation
+## 6. API Reference & Contract Documentation
 
 ### 1. `GET /api/health`
 Returns the status of the backend and verifies connectivity to the Python ML inference service.
@@ -186,7 +249,7 @@ Returns the status of the backend and verifies connectivity to the Python ML inf
   "status": "healthy",
   "service": "industrial-fire-backend",
   "uptimeSeconds": 312,
-  "environment": "development",
+  "environment": "production",
   "services": {
     "mlService": {
       "reachable": true,
@@ -194,13 +257,13 @@ Returns the status of the backend and verifies connectivity to the Python ML inf
       "details": {
         "model_loaded": true,
         "model_type": "RandomForestClassifier",
-        "n_estimators": 200
+        "feature_count": 14
       }
     },
     "dataLayer": {
-      "mode": "csv",
-      "totalEvents": 224029,
-      "totalInfrastructurePoints": 139682
+      "mode": "csv_repository",
+      "eventsCount": 224061,
+      "infrastructureCount": 139682
     }
   }
 }
@@ -217,17 +280,17 @@ Returns paginated thermal events with optional query filters.
   - `limit`: Page size (default: `50`).
 
 ### 3. `GET /api/events/:id`
-Returns full 14-feature attributes for a single verified event ID.
+Returns full 14-feature attributes and multi-criteria spatial context for a single verified event ID.
 
 ### 4. `GET /api/events/stats`
-Computes empirical aggregations across all 224,029 records:
+Computes empirical aggregations across all records:
 - Classification counts and percentages
 - Confidence band counts (HIGH, MEDIUM, LOW)
 - Persistence distribution histogram bins (1-5d, 6-15d, 16-30d, 31-60d, 60+d)
 - Fire Radiative Power (FRP) histogram bins (0-5, 5-15, 15-30, 30-50, 50+ MW)
 - Detection scan distribution bins (1-5, 6-20, 21-50, 51-100, 100+ scans)
 - Cross-class empirical signature comparison (`classComparison`)
-- High-confidence target counts (`highConfidenceStats`: 5,457 targets)
+- High-confidence target counts (`highConfidenceStats`: 5,477 targets)
 
 ### 5. `GET /api/events/geojson`
 Returns a valid GeoJSON `FeatureCollection` with data integrity metadata explaining that native coordinates for raw observations are preserved without synthetic coordinate fabrication.
@@ -244,120 +307,58 @@ Proxies model metadata from the Python ML service.
 ```json
 {
   "model_type": "RandomForestClassifier",
-  "n_estimators": 200,
-  "feature_names": [
-    "persistence_days", "detections", "avg_frp", "max_frp", "total_frp",
-    "avg_bright_ti4", "avg_bright_ti5", "night_ratio",
-    "distance_to_industrial_area_km", "distance_to_power_plant_km",
-    "distance_to_quarry_km", "distance_to_substation_km",
-    "distance_to_storage_tank_km", "distance_to_works_km"
-  ],
-  "classes": ["Industrial Fire", "Natural Fire", "Other", "Persistent Thermal Source"]
+  "version": "2.0.0",
+  "classes": ["Industrial Fire", "Natural Fire", "Other", "Persistent Thermal Source"],
+  "feature_count": 14,
+  "n_estimators": 150
 }
 ```
 
 ### 8. `POST /api/predict`
-Proxies live 14-feature classification requests to the ML service.
-- **Request Body (Exact 14 Features):**
-```json
-{
-  "persistence_days": 7.0,
-  "detections": 14,
-  "avg_frp": 15.2,
-  "max_frp": 45.0,
-  "total_frp": 212.8,
-  "avg_bright_ti4": 345.2,
-  "avg_bright_ti5": 305.1,
-  "night_ratio": 0.85,
-  "distance_to_industrial_area_km": 1.2,
-  "distance_to_power_plant_km": 8.4,
-  "distance_to_quarry_km": 12.0,
-  "distance_to_substation_km": 4.5,
-  "distance_to_storage_tank_km": 2.1,
-  "distance_to_works_km": 3.0
-}
-```
-- **Response:**
-```json
-{
-  "prediction": "Industrial Fire",
-  "confidence": 0.94,
-  "probabilities": {
-    "Industrial Fire": 0.94,
-    "Natural Fire": 0.01,
-    "Other": 0.02,
-    "Persistent Thermal Source": 0.03
-  }
-}
-```
+Proxies live 14-feature classification requests to the ML service and returns probabilistic class scores plus multi-factor transparent evidence.
 
 ---
 
-## 6. Environment Variables Documentation
+## 7. Environment Variables Configuration (`.env.example`)
 
-### Backend (`backend/.env`)
+A clean template is provided in `.env.example` with zero hard-coded secrets or credentials:
+
+```bash
+cp .env.example .env
+```
+
 | Variable | Default Value | Description |
 |---|---|---|
-| `PORT` | `5000` | Port for Express REST API server |
-| `NODE_ENV` | `development` | Runtime environment (`development`, `production`, `test`) |
-| `ML_SERVICE_URL` | `http://localhost:8000` | Base URL of Python FastAPI inference microservice |
-| `DATABASE_URL` | `postgresql://...` | Connection URI for PostgreSQL + PostGIS |
-| `CORS_ORIGIN` | `http://localhost:5173` | Allowed origins for CORS policy (comma-separated or `*`) |
-
-### Python ML Service (`ml-service/.env`)
-| Variable | Default Value | Description |
-|---|---|---|
-| `PORT` | `8000` | Port for FastAPI Uvicorn server |
-| `HOST` | `0.0.0.0` | Bind host address |
-| `MODEL_PATH` | `model/fire_type_model.pkl` | Relative path to pre-trained model binary |
-| `RELOAD` | `false` | Enable auto-reload for local debugging |
-
-### Frontend (`frontend/.env`)
-| Variable | Default Value | Description |
-|---|---|---|
-| `VITE_API_URL` | `http://localhost:5000/api` | Backend REST API base URL |
-| `VITE_ML_SERVICE_URL` | `http://localhost:8000` | ML Service base URL |
-
----
-
-## 7. Model File Deployment & Git LFS Requirements
-
-The pre-trained model binary `ml-service/model/fire_type_model.pkl` is **208.7 MB**. 
-
-- Standard GitHub repositories reject commits exceeding **100 MB**.
-- For version control and CI/CD pipelines, track the model binary using **Git Large File Storage (Git LFS)**:
-  ```bash
-  # Initialize Git LFS
-  git lfs install
-
-  # Track the model file
-  git lfs track "ml-service/model/*.pkl"
-  git add .gitattributes
-  ```
-- In cloud deployments (AWS ECS, Docker Hub, Kubernetes), mount the model binary as an external volume or pull it from an S3 bucket during container initialization.
+| `FRONTEND_PORT` | `3000` | Host port for Nginx web frontend |
+| `BACKEND_PORT` | `5000` | Host port for Node.js Express API |
+| `ML_PORT` | `8000` | Host port for Python FastAPI ML inference service |
+| `POSTGRES_PORT` | `5432` | Host port for PostGIS database |
+| `POSTGRES_DB` | `industrial_fire_db` | PostgreSQL database name |
+| `POSTGRES_USER` | `postgres` | Database admin user |
+| `POSTGRES_PASSWORD` | `postgrespassword` | Database admin password (override for production) |
+| `DATABASE_URL` | `postgresql://...` | Connection URI for backend to connect to database |
+| `ML_SERVICE_URL` | `http://ml-service:8000` | Microservice URL for backend to ML communications |
+| `CORS_ORIGIN` | `http://localhost:3000,...` | Allowed CORS origins for browser security |
+| `FIRMS_MAP_KEY` | *(empty string)* | NASA FIRMS Map Key for live satellite ingestion |
+| `MODEL_PATH` | `/app/model/fire_type_model.pkl`| Path to authoritative Scikit-Learn model binary |
+| `VITE_API_URL` | `/api` | Base path for frontend API calls (proxied by Nginx) |
 
 ---
 
 ## 8. Verification & Test Suite Results
 
-The prototype has been validated with comprehensive test suites:
+The project has been rigorously tested across all tiers (see [docs/TEST_REPORT.md](file:///c:/Users/rajku/Desktop/SIH-PS-2/IndustrialFireAI/docs/TEST_REPORT.md)):
 
-- **Frontend Production Build:** `npm run build` completed with **0 errors** (Vite 6, bundle split into maps, vendor, and charts chunks).
-- **Backend API Integration Tests:** `12 / 12 passed` (`npm test` in `backend/`).
-- **Python ML Unit & Inference Tests:** `10 / 10 passed` (`pytest -v` in `ml-service/`).
-- **API Smoke Tests:** `7 / 7 live endpoints verified` via automated PowerShell script (`smoke_test.ps1`).
+- **Backend API & Ingestion Tests:** `52 / 52 passed` (`npm test` in `backend/`).
+- **Python ML Inference & Pipeline Tests:** `15 / 15 passed` (`pytest` in `ml-service/`).
+- **Frontend SPA Components & UI Tests:** `23 / 23 passed` (`npm test` in `frontend/`).
+- **Production Build:** Vite bundle generated with `0 errors`.
+- **Docker Compose Orchestration:** All 4 services (`db`, `ml-service`, `backend`, `frontend`) build, start, communicate, and pass automated container health checks.
 
 ---
 
-## 9. Known Limitations & Future Improvements
+## 9. Known Limitations & Scientific Disclaimers
 
-### Known Limitations
-1. **No Native Calendar Timestamps:** The authoritative NASA FIRMS dataset `fire_dataset.csv.xls` records temporal duration via cumulative `persistence_days` (1 to 179 days) rather than calendar timestamps (`datetime`). In strict accordance with scientific integrity rules, synthetic calendar dates were not fabricated.
-2. **Coordinate Separation:** `fire_dataset.csv.xls` contains computed Euclidean distances to infrastructure categories rather than raw latitude/longitude columns. Spatial coordinates on the GIS map originate from authoritative OpenStreetMap infrastructure centroids and verified spatial joins.
-3. **In-Memory Streaming Cache:** The Node backend caches the parsed 224,029 observation rows in Node heap memory (~120 MB). For clusters exceeding 50 million records, migration to the included PostGIS database is recommended.
-
-### Future Improvements
-1. **Live NRT NASA FIRMS API Pipeline:** Implement an automated scheduled worker fetching near-real-time (NRT) active fire GeoTIFFs/CSVs directly from NASA FIRMS API keys.
-2. **Automated Defense & Civil Alerting:** Implement automated Telegram / SMS / Email webhooks dispatched when a high-confidence Industrial Fire ($\ge 85\%$) is detected within 2 km of high-risk chemical storage tanks.
-3. **Plume Dispersion Modeling:** Couple wind vector data from ECMWF / NOAA GFS with Fire Radiative Power (FRP) to estimate toxic plume dispersal contours around industrial hazard zones.
-4. **Edge Deployment:** Containerize the ML model with ONNX Runtime for low-latency tactical edge processing on drone and mobile surveillance platforms.
+1. **Probabilistic Classification:** Thermal anomaly classification is probabilistic and derived from VIIRS/MODIS radiometric measurements and OpenStreetMap spatial correlation. Satellite data alone cannot establish definitive on-the-ground physical root cause without field inspection.
+2. **Dual Data Repository:** The backend features both an instant streaming CSV repository for offline evaluation and a PostGIS persistent database for live GIS ingestion.
+3. **NASA FIRMS Rate Limits:** Free NASA FIRMS map keys have daily download quotas; the ingestion pipeline safely throttles requests and deduplicates all ingested records.

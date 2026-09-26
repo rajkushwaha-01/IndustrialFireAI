@@ -1,24 +1,126 @@
-version: '3.8'
-
 services:
+  # ----------------------------------------------------------------------------
+  # 1. PostGIS Database - Spatial Storage & Indexing for NTRO Fire & Infrastructure
+  # ----------------------------------------------------------------------------
   db:
     image: postgis/postgis:16-3.4
-    container_name: industrial_fire_postgis
+    container_name: industrial_fire_db
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: industrial_fire_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: ${POSTGRES_DB:-industrial_fire_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgis_data:/var/lib/postgresql/data
-      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
-    restart: unless-stopped
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d industrial_fire_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-industrial_fire_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    networks:
+      - industrial_fire_net
+
+  # ----------------------------------------------------------------------------
+  # 2. Machine Learning Inference Service - FastAPI & Scikit-Learn Model
+  # ----------------------------------------------------------------------------
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: industrial_fire_ml
+    restart: unless-stopped
+    environment:
+      PORT: 8000
+      MODEL_PATH: ${MODEL_PATH:-/app/model/fire_type_model.pkl}
+    ports:
+      - "${ML_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - industrial_fire_net
+
+  # ----------------------------------------------------------------------------
+  # 3. Node.js Express Backend - Data Repositories, Spatial API, Ingestion Pipeline
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: industrial_fire_backend
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-industrial_fire_db}
+      ML_SERVICE_URL: http://ml-service:8000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost:5173,http://localhost}
+      FIRMS_MAP_KEY: ${FIRMS_MAP_KEY:-}
+      FIRMS_DEFAULT_SOURCE: ${FIRMS_DEFAULT_SOURCE:-VIIRS_NOAA20_NRT}
+      FIRMS_DEFAULT_COUNTRY: ${FIRMS_DEFAULT_COUNTRY:-IND}
+      FIRMS_AUTO_SYNC_ENABLED: ${FIRMS_AUTO_SYNC_ENABLED:-false}
+      FIRMS_SYNC_INTERVAL_HOURS: ${FIRMS_SYNC_INTERVAL_HOURS:-24}
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - industrial_fire_net
+
+  # ----------------------------------------------------------------------------
+  # 4. Frontend - Multi-Stage Production React SPA + Nginx Reverse Proxy
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_ML_SERVICE_URL: ${VITE_ML_SERVICE_URL:-http://localhost:8000}
+        VITE_MAPTILER_API_KEY: ${VITE_MAPTILER_API_KEY:-}
+    container_name: industrial_fire_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - industrial_fire_net
+
+# ------------------------------------------------------------------------------
+# Networks & Persistent Volumes
+# ------------------------------------------------------------------------------
+networks:
+  industrial_fire_net:
+    name: industrial_fire_net
+    driver: bridge
 
 volumes:
   postgis_data:
+    name: industrial_fire_postgis_data
+    driver: local

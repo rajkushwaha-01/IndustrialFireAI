@@ -1,4 +1,5 @@
 const { isValidLatitude, isValidLongitude } = require('../utils/geoValidation');
+const classificationEvidenceService = require('../services/classificationEvidenceService');
 
 /**
  * Canonical Event Model Schema & GeoJSON Formatter
@@ -65,9 +66,19 @@ class Event {
     // Spatial context (geospatial correlation metrics)
     this.spatial_context = data.spatial_context || null;
 
+    // Multi-source classification & evidence layer (Phase 7)
+    this.evidence = data.evidence || null;
+
     // Timestamps
     this.created_at = data.created_at || new Date().toISOString();
     this.updated_at = data.updated_at || new Date().toISOString();
+  }
+
+  getEvidence() {
+    if (!this.evidence) {
+      this.evidence = classificationEvidenceService.evaluateEvidence(this);
+    }
+    return this.evidence;
   }
 
   toJSON() {
@@ -111,6 +122,7 @@ class Event {
       distance_to_works_km: this.distance_to_works_km,
       prediction_class: this.prediction_class,
       prediction_confidence: this.prediction_confidence,
+      evidence: this.getEvidence(),
       created_at: this.created_at,
       updated_at: this.updated_at
     };
@@ -126,6 +138,8 @@ class Event {
       return null;
     }
 
+    const evidenceObj = this.getEvidence();
+
     return {
       type: 'Feature',
       id: this.id,
@@ -140,6 +154,9 @@ class Event {
         confidence: this.confidence,
         prediction_class: this.prediction_class,
         prediction_confidence: this.prediction_confidence,
+        evidence: evidenceObj,
+        evidence_summary: evidenceObj.summary_text,
+        evidence_factors: evidenceObj.factors,
         frp: this.frp,
         avg_frp: this.avg_frp,
         max_frp: this.max_frp,

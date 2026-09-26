@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field, ConfigDict
 
 ORDERED_FEATURE_NAMES = [
@@ -59,12 +59,19 @@ class PredictResponse(BaseModel):
     prediction: str
     confidence: float
     probabilities: Dict[str, float]
+    evidence: Optional[Dict[str, Any]] = None
 
 class ModelInfoResponse(BaseModel):
     model_type: str
     n_estimators: int
     feature_names: List[str]
     classes: List[str]
+    version: Optional[str] = "2.0.0"
+    trained_at: Optional[str] = None
+    hyperparameters: Optional[Dict[str, Any]] = None
+    evaluation: Optional[Dict[str, Any]] = None
+    feature_importances: Optional[Dict[str, float]] = None
+    dataset_summary: Optional[Dict[str, Any]] = None
 
 class HealthResponse(BaseModel):
     status: str
