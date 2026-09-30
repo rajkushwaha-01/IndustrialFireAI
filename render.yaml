@@ -1,0 +1,51 @@
+services:
+  - type: pserv
+    name: industrialfire-ml
+    runtime: docker
+    region: singapore
+    dockerfilePath: ml-service/Dockerfile
+    dockerContext: ml-service
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: MODEL_PATH
+        value: /app/model/fire_type_model.pkl
+
+  - type: web
+    name: industrialfire-backend
+    runtime: docker
+    region: singapore
+    dockerfilePath: backend/Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: NODE_ENV
+        value: production
+      - key: ML_SERVICE_HOSTPORT
+        fromService:
+          type: pserv
+          name: industrialfire-ml
+          property: hostport
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: FIRMS_AUTO_SYNC_ENABLED
+        value: "false"
+
+  - type: web
+    name: industrialfire-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: industrialfire-backend
+          envVarKey: RENDER_EXTERNAL_URL

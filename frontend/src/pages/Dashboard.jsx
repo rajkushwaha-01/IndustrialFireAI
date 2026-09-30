@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { apiClient } from '../services/api';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import { 
   ResponsiveContainer, 
@@ -60,10 +60,10 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
     try {
       // Parallel fetch to backend REST API
       const [statsRes, eventsRes, priorityRes, infraRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/events/stats', { timeout: 8000 }),
-        axios.get('http://localhost:5000/api/events?limit=8', { timeout: 8000 }),
-        axios.get('http://localhost:5000/api/events?classification=Industrial%20Fire&minConfidence=0.9&minPersistence=30&limit=4', { timeout: 8000 }),
-        axios.get('http://localhost:5000/api/infrastructure?format=geojson&limit=120', { timeout: 8000 })
+        apiClient.get('/events/stats', { timeout: 8000 }),
+        apiClient.get('/events?limit=8', { timeout: 8000 }),
+        apiClient.get('/events?classification=Industrial%20Fire&minConfidence=0.9&minPersistence=30&limit=4', { timeout: 8000 }),
+        apiClient.get('/infrastructure?format=geojson&limit=120', { timeout: 8000 })
       ]);
 
       if (statsRes.data?.success) setStats(statsRes.data.data);

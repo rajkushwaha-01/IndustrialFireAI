@@ -133,6 +133,17 @@ docker compose down
 docker compose down -v
 ```
 
+### Deploy to Render
+
+The Render Blueprint deploys the static frontend, API, and private ML service in Singapore. The API image includes the CSV datasets. PostGIS is not provisioned because the current backend reads the CSV repository and does not query the database.
+
+1. Push this repository to GitHub or GitLab and connect that repository to Render.
+2. In the Render Dashboard, choose **New > Blueprint**, select the repository, and deploy the root `render.yaml`.
+3. Wait for the API and frontend deployments to finish, then open the `industrialfire-frontend` URL. The API and ML endpoints are connected through Render-managed environment variables.
+4. For live FIRMS ingestion, add `FIRMS_MAP_KEY` to the backend service in Render. For MapTiler tiles, add `VITE_MAPTILER_API_KEY` to the frontend and redeploy it.
+
+The backend API is publicly reachable and currently has no authentication. The private ML service is not internet-facing. Render's private service requires a paid instance; confirm current pricing before deploying.
+
 ---
 
 ## 4. Manual Local Development Setup (Alternative)

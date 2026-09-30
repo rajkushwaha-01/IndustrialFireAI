@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import { apiClient } from '../services/api';
 import PageContainer from '../components/PageContainer';
 import SectionHeader from '../components/SectionHeader';
 import StatusBadge from '../components/StatusBadge';
@@ -66,7 +66,7 @@ export default function Events() {
       if (minPersistence) params.append('minPersistence', minPersistence);
       if (hasCoordinates) params.append('hasCoordinates', hasCoordinates);
 
-      const res = await axios.get(`http://localhost:5000/api/events?${params.toString()}`, { timeout: 6000 });
+      const res = await apiClient.get(`/events?${params.toString()}`, { timeout: 6000 });
       if (res.data) {
         setEvents(res.data.data || []);
         setPagination(res.data.pagination || { page: targetPage, limit, total: 0, totalPages: 1 });
@@ -134,7 +134,7 @@ export default function Events() {
         distance_to_works_km: Number(evt.distance_to_works_km)
       };
 
-      const res = await axios.post('http://localhost:5000/api/predict', payload, { timeout: 4000 });
+      const res = await apiClient.post('/predict', payload, { timeout: 4000 });
       if (res.data?.probabilities) {
         setDetailProbabilities(res.data.probabilities);
       }

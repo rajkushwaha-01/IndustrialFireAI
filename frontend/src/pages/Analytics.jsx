@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiClient } from '../services/api';
 import {
   ResponsiveContainer,
   BarChart,
@@ -132,7 +132,7 @@ export default function Analytics() {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get('http://localhost:5000/api/events/stats', { timeout: 6000 });
+      const res = await apiClient.get('/events/stats', { timeout: 6000 });
       if (res.data?.success) {
         setStats(res.data.data);
       } else {

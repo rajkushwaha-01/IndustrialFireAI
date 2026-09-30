@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import axios from 'axios';
+import { apiClient } from './services/api';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import MapView from './pages/MapView';
@@ -18,23 +18,16 @@ export default function App() {
 
   const fetchHealth = async () => {
     setLoadingHealth(true);
-    // Query backend health
     try {
-      const res = await axios.get('http://localhost:5000/api/health', { timeout: 3000 });
+      const res = await apiClient.get('/health', { timeout: 3000 });
       setBackendHealth(res.data);
-      if (res.data?.services?.mlService?.reachable) {
-        setMlHealth(res.data.services.mlService.details);
-      }
+      const mlService = res.data?.services?.mlService;
+      setMlHealth(mlService?.reachable
+        ? mlService.details
+        : { status: mlService?.status || 'offline', model_loaded: false });
     } catch (err) {
       setBackendHealth({ status: 'offline', error: err.message });
-    }
-
-    // Direct query to ML service if not set
-    try {
-      const mlRes = await axios.get('http://localhost:8000/health', { timeout: 3000 });
-      setMlHealth(mlRes.data);
-    } catch (err) {
-      setMlHealth((prev) => prev || { status: 'offline', model_loaded: false, error: err.message });
+      setMlHealth({ status: 'offline', model_loaded: false, error: err.message });
     } finally {
       setLoadingHealth(false);
     }
