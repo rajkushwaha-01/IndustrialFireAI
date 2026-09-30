@@ -12,16 +12,30 @@ const app = express();
 
 // Global Middlewares
 const allowedOrigins = config.corsOrigin ? config.corsOrigin.split(',').map((o) => o.trim()) : ['*'];
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`Origin ${origin} not permitted by CORS policy`));
+app.use((req, res, next) => {
+  const requestHost = (req.get('x-forwarded-host') || req.get('host') || '')
+    .split(',')[0]
+    .trim()
+    .toLowerCase();
+  const isSameOrigin = (origin) => {
+    try {
+      return new URL(origin).host.toLowerCase() === requestHost;
+    } catch {
+      return false;
     }
-  },
-  credentials: true
-}));
+  };
+
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin) || isSameOrigin(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not permitted by CORS policy`));
+      }
+    },
+    credentials: true
+  })(req, res, next);
+});
 app.use(express.json());
 
 if (config.nodeEnv !== 'test') {

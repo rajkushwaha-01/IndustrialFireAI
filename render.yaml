@@ -29,7 +29,7 @@ services:
           name: industrialfire-ml
           property: hostport
       - key: CORS_ORIGIN
-        value: "*"
+        value: https://industrialfireai.onrender.com
       - key: FIRMS_AUTO_SYNC_ENABLED
         value: "false"
 
