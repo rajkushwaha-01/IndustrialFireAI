@@ -12,7 +12,7 @@ services:
         value: /app/model/fire_type_model.pkl
 
   - type: web
-    name: industrialfire-backend
+    name: industrialfireai
     runtime: docker
     region: singapore
     dockerfilePath: backend/Dockerfile.render

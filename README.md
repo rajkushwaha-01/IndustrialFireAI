@@ -139,7 +139,7 @@ The Render Blueprint deploys the API and private ML service in Singapore. The ba
 
 1. Push this repository to GitHub or GitLab and connect that repository to Render.
 2. In the Render Dashboard, choose **New > Blueprint**, select the repository, and deploy the root `render.yaml`.
-3. Wait for both services to deploy, then open the `industrialfire-backend` URL. The React app is served at `/` and the API is available under `/api` on that same domain.
+3. Wait for both services to deploy, then open the `industrialfireai` URL. The React app is served at `/` and the API is available under `/api` on that same domain.
 4. For live FIRMS ingestion, add `FIRMS_MAP_KEY` to the backend service in Render. For MapTiler tiles, add `VITE_MAPTILER_API_KEY` to the frontend and redeploy it.
 
 The backend API is publicly reachable and currently has no authentication. The private ML service is not internet-facing. Render's private service requires a paid instance; confirm current pricing before deploying.
