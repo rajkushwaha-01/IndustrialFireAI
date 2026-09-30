@@ -4,15 +4,10 @@ import {
   Flame, 
   Map as MapIcon, 
   LayoutDashboard, 
-  ListFilter, 
   BarChart3, 
   Database, 
-  Info,
   Bell,
   Shield,
-  Activity,
-  CheckCircle2,
-  AlertTriangle,
   X
 } from 'lucide-react';
 import { DESIGN_TOKENS } from '../theme/tokens';
@@ -23,25 +18,23 @@ export default function Navbar({ backendHealth, mlHealth }) {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Map', path: '/map', icon: MapIcon },
-    { name: 'Events', path: '/events', icon: ListFilter },
-    { name: 'Investigation', path: '/investigate', icon: Activity },
+    { name: 'Events', path: '/events', icon: Flame },
     { name: 'Analytics', path: '/analytics', icon: BarChart3 },
     { name: 'Data Sources', path: '/data-sources', icon: Database },
-    { name: 'About', path: '/about', icon: Info },
   ];
 
   const notifications = [
     {
       id: 1,
-      title: 'Authoritative Dataset Loaded',
+      title: 'Dataset Loaded',
       time: 'System Boot',
-      desc: '224,029 thermal observations & 139,682 OSM infrastructure points active in data layer.'
+      desc: '224,029 thermal observations & 139,682 OSM points active.'
     },
     {
       id: 2,
-      title: 'ML Model Verified',
+      title: 'ML Model Ready',
       time: 'Model Check',
-      desc: 'RandomForestClassifier (200 estimators) ready on port 8000.'
+      desc: 'RandomForestClassifier (200 estimators) on port 8000.'
     }
   ];
 
@@ -64,7 +57,7 @@ export default function Navbar({ backendHealth, mlHealth }) {
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
-                Industrial Fire & Persistent Thermal Source AI
+                Industrial Fire & Thermal Source Detection
               </p>
             </div>
           </div>
@@ -137,6 +130,7 @@ export default function Navbar({ backendHealth, mlHealth }) {
                     <button
                       onClick={() => setShowNotifications(false)}
                       className="text-slate-400 hover:text-slate-600 p-0.5 rounded-lg"
+                      aria-label="Close notifications"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>

@@ -15,20 +15,17 @@ import {
   SlidersHorizontal,
   Flame,
   Zap,
-  Thermometer,
   RotateCcw,
   X,
   Activity,
-  Compass,
   Cpu,
   ShieldCheck,
   Building2,
   ExternalLink,
   Info,
-  Calendar,
-  Layers,
-  ArrowUpDown,
-  Maximize2
+  Clock,
+  MapPin,
+  Layers
 } from 'lucide-react';
 
 export default function Events() {
@@ -166,7 +163,7 @@ export default function Events() {
       <SectionHeader
         badge="224,029 Observation Records"
         title="Thermal Events Explorer"
-        description="Filter and inspect authoritative thermal anomaly observations from data/fire_dataset.csv.xls. Evaluated across 14 multi-temporal FIRMS and OpenStreetMap spatial metrics. Click any row to inspect complete features and live model probability breakdowns."
+        description="Thermal anomaly observations evaluated across FIRMS telemetry and OpenStreetMap spatial metrics."
       />
 
       {/* Evaluator Demo Mode Bar */}
@@ -179,14 +176,11 @@ export default function Events() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-slate-900">
-                  Demo Mode: Evaluator Dataset Presets
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                  Authoritative Dataset Samples
+                  Filter Presets
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 mt-0.5">
-                Quick-test presets extracted directly from <code className="font-mono bg-white px-1 py-0.2 rounded border border-slate-200 text-slate-700">fire_dataset.csv.xls</code>. Tests live ML inference latency &amp; 4-class probabilities without fabricating synthetic data.
+                Preset filters for classification, persistence, and confidence thresholds.
               </p>
             </div>
           </div>
@@ -199,9 +193,10 @@ export default function Events() {
                 setMinConfidence('0.7');
                 setPage(1);
               }}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-flame-50 hover:bg-flame-100 text-flame-800 border border-flame-200 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-flame-50 hover:bg-flame-100 text-flame-800 border border-flame-200 transition-colors shadow-2xs"
             >
-              🔥 Industrial Fire Preset
+              <Flame className="w-3.5 h-3.5 text-flame-700" />
+              <span>Industrial Fire Preset</span>
             </button>
             <button
               onClick={() => {
@@ -210,9 +205,10 @@ export default function Events() {
                 setMinConfidence('');
                 setPage(1);
               }}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-persistent-50 hover:bg-persistent-100 text-persistent-800 border border-persistent-200 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-persistent-50 hover:bg-persistent-100 text-persistent-800 border border-persistent-200 transition-colors shadow-2xs"
             >
-              ⚡ Persistent Source Preset
+              <Zap className="w-3.5 h-3.5 text-persistent-700" />
+              <span>Persistent Source Preset</span>
             </button>
             <button
               onClick={() => {
@@ -221,9 +217,10 @@ export default function Events() {
                 setMinConfidence('0.85');
                 setPage(1);
               }}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-hazard-50 hover:bg-hazard-100 text-hazard-800 border border-hazard-200 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-hazard-50 hover:bg-hazard-100 text-hazard-800 border border-hazard-200 transition-colors shadow-2xs"
             >
-              🌿 Natural Fire Preset
+              <Activity className="w-3.5 h-3.5 text-hazard-700" />
+              <span>Natural Fire Preset</span>
             </button>
           </div>
         </div>
@@ -483,7 +480,7 @@ export default function Events() {
                   <StatusBadge status={selectedEvent.fire_type} type="classification" />
                 </div>
                 <p className="text-xs text-slate-500">
-                  Authoritative multi-temporal thermal anomaly observation from data/fire_dataset.csv.xls
+                  Observation record details and spatial metrics
                 </p>
               </div>
               <button
@@ -508,7 +505,7 @@ export default function Events() {
 
               {loadingInference ? (
                 <div className="py-2 text-center text-xs text-slate-400 font-mono">
-                  Querying live Python ML model on port 8000...
+                  Querying ML service...
                 </div>
               ) : detailProbabilities ? (
                 <div className="space-y-2 pt-1 text-xs">
@@ -609,8 +606,9 @@ export default function Events() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] pt-1 border-t border-slate-800/80">
                   {/* Thermal Pillar */}
                   <div className="bg-slate-800/50 p-2 rounded-xl border border-slate-700/60 space-y-1">
-                    <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider block">
-                      🔥 Thermal Evidence
+                    <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider flex items-center gap-1">
+                      <Flame className="w-3 h-3 text-orange-400 shrink-0" />
+                      <span>Thermal Evidence</span>
                     </span>
                     <div className="text-slate-300 flex justify-between">
                       <span className="text-slate-400">Radiative Power:</span>
@@ -628,8 +626,9 @@ export default function Events() {
 
                   {/* Spatial Pillar */}
                   <div className="bg-slate-800/50 p-2 rounded-xl border border-slate-700/60 space-y-1">
-                    <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider block">
-                      📍 Spatial Evidence
+                    <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-sky-400 shrink-0" />
+                      <span>Spatial Evidence</span>
                     </span>
                     <div className="text-slate-300 flex justify-between">
                       <span className="text-slate-400">Min Distance:</span>
@@ -647,8 +646,9 @@ export default function Events() {
 
                   {/* Temporal Pillar */}
                   <div className="bg-slate-800/50 p-2 rounded-xl border border-slate-700/60 space-y-1">
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
-                      ⏱ Temporal Evidence
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span>Temporal Evidence</span>
                     </span>
                     <div className="text-slate-300 flex justify-between">
                       <span className="text-slate-400">Persistence:</span>
@@ -674,8 +674,9 @@ export default function Events() {
                 )}
 
                 {/* Scientific Disclaimer */}
-                <div className="p-2 bg-slate-950/60 border border-slate-800 rounded-xl text-[10px] text-slate-400 italic">
-                  🛡 <strong>Scientific Disclaimer:</strong> {detailEvidence.scientific_disclaimer}
+                <div className="p-2 bg-slate-950/60 border border-slate-800 rounded-xl text-[10px] text-slate-400 italic flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-slate-400 shrink-0" />
+                  <span><strong>Scientific Disclaimer:</strong> {detailEvidence.scientific_disclaimer}</span>
                 </div>
               </div>
             )}
@@ -784,7 +785,7 @@ export default function Events() {
             {/* Modal Footer & Data Integrity Note */}
             <div className="pt-2 border-t border-slate-100 space-y-2">
               <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[10px] text-slate-500 leading-relaxed">
-                <strong className="text-slate-700">Observational Integrity Note:</strong> All 14 input features displayed above originate directly from verified observations in <code className="font-mono text-slate-800">data/fire_dataset.csv.xls</code>. Live ML probabilities are generated dynamically on port 8000. Never call synthetic/demo data real satellite observations.
+                <strong className="text-slate-700">Observation Data:</strong> All 14 input features displayed above originate from <code className="font-mono text-slate-800">data/fire_dataset.csv.xls</code>. Model probabilities are generated dynamically by the ML service.
               </div>
               <div className="flex items-center justify-between gap-3">
                 <Link

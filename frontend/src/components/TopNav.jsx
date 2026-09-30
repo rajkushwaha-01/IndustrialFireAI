@@ -4,21 +4,17 @@ import {
   Flame, 
   Map as MapIcon, 
   LayoutDashboard, 
-  ListFilter, 
   BarChart3, 
-  Database, 
-  Info,
-  Activity
+  Database
 } from 'lucide-react';
 
 export default function TopNav({ backendHealth, mlHealth }) {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Map', path: '/map', icon: MapIcon },
-    { name: 'Events', path: '/events', icon: ListFilter },
+    { name: 'Events', path: '/events', icon: Flame },
     { name: 'Analytics', path: '/analytics', icon: BarChart3 },
     { name: 'Data Sources', path: '/data-sources', icon: Database },
-    { name: 'About', path: '/about', icon: Info },
   ];
 
   return (
@@ -37,7 +33,7 @@ export default function TopNav({ backendHealth, mlHealth }) {
                   NTRO • SIH 26162
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">Thermal Anomaly & Infrastructure Geospatial AI</p>
+              <p className="text-xs text-slate-500 font-medium">Thermal Anomaly & Infrastructure Surveillance</p>
             </div>
           </div>
 

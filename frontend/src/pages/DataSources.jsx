@@ -12,16 +12,11 @@ import {
   ShieldCheck,
   AlertTriangle,
   ExternalLink,
-  CheckCircle2,
   Database,
   ArrowDown,
   Building2,
-  Radio,
   Clock,
-  Thermometer,
-  Zap,
-  Crosshair,
-  FileSpreadsheet
+  Crosshair
 } from 'lucide-react';
 
 export default function DataSources() {
@@ -80,7 +75,7 @@ export default function DataSources() {
       title: 'Random Forest Classification',
       subtitle: '200-Estimator Machine Learning Inference',
       icon: Cpu,
-      badge: 'AI Classification',
+      badge: 'ML Classification',
       badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
       description:
         'The pre-trained RandomForestClassifier evaluates the 14-dimensional feature vector. By synthesizing temporal persistence with infrastructure proximity, the model classifies each anomaly into Industrial Fire, Persistent Thermal Source, Natural Fire, or Other with calibrated probability scores.',
@@ -90,24 +85,24 @@ export default function DataSources() {
     {
       step: '06',
       title: 'GIS Geospatial Surveillance',
-      subtitle: 'Interactive Command Center Cartography',
+      subtitle: 'Interactive Map Interface',
       icon: MapPin,
       badge: 'Spatial Interface',
       badgeColor: 'bg-geo-50 text-geo-700 border-geo-200',
       description:
-        'Classified events are projected onto Leaflet/GIS cartographic layers alongside critical infrastructure anchors. Color-coded markers, confidence rings, and proximity buffers empower defence, disaster management, and environmental monitoring personnel to inspect critical anomalies.',
+        'Classified events are projected onto Leaflet GIS layers alongside infrastructure anchors, confidence rings, and proximity buffers for spatial inspection.',
       attribution: 'Leaflet & GeoJSON',
       link: 'https://leafletjs.com/'
     },
     {
       step: '07',
-      title: 'Monitoring & Intelligence Analytics',
-      subtitle: 'Operational Alerts & Threat Assessment',
+      title: 'Monitoring & Analytics',
+      subtitle: 'Alerts & Assessment',
       icon: BarChart3,
-      badge: 'Actionable Intelligence',
+      badge: 'Analytics & Alerts',
       badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
       description:
-        'High-confidence target detections trigger regulatory alerts, civil defense dispatches, and emission tracking. Empirical aggregations monitor recurrence cycles, high-risk industrial clusters, and seasonal baseline deviations across national borders.',
+        'High-confidence detections generate alerts and emission tracking. Statistical metrics monitor recurrence cycles, industrial clusters, and baseline distributions.',
       attribution: 'ThermalWatch Analytics Suite',
       link: null
     }
@@ -313,7 +308,7 @@ export default function DataSources() {
         '14 strict input features',
         '4 target classes',
         'joblib deserialization',
-        'Zero retraining policy'
+        'Pre-trained offline weights'
       ],
       linkText: 'scikit-learn Random Forest Model Specification',
       linkUrl: 'https://scikit-learn.org/stable/modules/ensemble.html#forests-of-randomized-trees'
@@ -324,9 +319,9 @@ export default function DataSources() {
     <PageContainer>
       {/* Page Header */}
       <SectionHeader
-        badge="System Architecture & Data Lineage"
-        title="Data Sources, Feature Engineering & ML Pipeline"
-        description="Comprehensive audit of the data lineage, machine learning classification pipeline, model feature representations, and class ontologies driving the ThermalWatch geospatial intelligence platform."
+        badge="Architecture"
+        title="Data Sources & ML Pipeline"
+        description="Data lineage, feature engineering, and machine learning classification pipeline."
       />
 
       {/* Triad Architecture Principles Callout */}
@@ -342,7 +337,7 @@ export default function DataSources() {
             </div>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            <strong className="text-slate-900">NASA FIRMS provides thermal anomaly information but does NOT by itself classify the anomaly.</strong> Spaceborne sensors detect radiative heat and brightness temperatures, identifying that an anomaly exists, but cannot ascertain whether it is an industrial accident, flare, or vegetation burn.
+            <strong className="text-slate-900">NASA FIRMS provides thermal anomaly detection without classification.</strong> Sensors record radiative power and brightness temperatures to locate anomalies.
           </p>
         </div>
 
@@ -357,7 +352,7 @@ export default function DataSources() {
             </div>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            <strong className="text-slate-900">OpenStreetMap provides vital geographic and spatial context.</strong> By calculating Euclidean distances from thermal events to 139,682 known industrial complexes, power plants, refineries, and quarries, it establishes whether an anomaly is embedded in an industrial landscape.
+            <strong className="text-slate-900">OpenStreetMap provides spatial context.</strong> Distances to 139,682 industrial complexes, power plants, refineries, and quarries correlate anomalies with infrastructure.
           </p>
         </div>
 
@@ -372,7 +367,7 @@ export default function DataSources() {
             </div>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            <strong className="text-slate-900">The Machine Learning layer provides intelligent classification.</strong> By fusing multi-temporal thermal persistence (days) with geospatial proximity features, the 200-tree Random Forest discriminates between industrial fires, permanent kilns, and natural biomass burns.
+            <strong className="text-slate-900">Machine learning provides classification.</strong> Fusing multi-temporal persistence with spatial proximity features classifies industrial fires, persistent sources, and natural burns.
           </p>
         </div>
       </div>
@@ -384,9 +379,9 @@ export default function DataSources() {
             <Layers className="w-3.5 h-3.5" />
             <span>End-to-End Processing Flow</span>
           </div>
-          <h2 className="text-lg font-bold text-slate-900">Visual System Architecture Pipeline</h2>
+          <h2 className="text-lg font-bold text-slate-900">Pipeline Architecture</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Data transformations from spaceborne infrared sensors to real-time intelligence and decision support:
+            Data pipeline from infrared sensor telemetry to classification output:
           </p>
         </div>
 
@@ -461,9 +456,9 @@ export default function DataSources() {
             <Crosshair className="w-3.5 h-3.5" />
             <span>Target Classification Ontology</span>
           </div>
-          <h2 className="text-lg font-bold text-slate-900">The Four Model Target Classes</h2>
+          <h2 className="text-lg font-bold text-slate-900">Target Classes</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Definitions, empirical characteristics, and operational scope for the model output categories:
+            Characteristics and operational criteria for model output classes:
           </p>
         </div>
 
@@ -507,9 +502,9 @@ export default function DataSources() {
             <Cpu className="w-3.5 h-3.5" />
             <span>Feature Engineering Architecture</span>
           </div>
-          <h2 className="text-lg font-bold text-slate-900">The 14 Model Input Features</h2>
+          <h2 className="text-lg font-bold text-slate-900">Model Input Features</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Exact vector schema evaluated by the Random Forest classifier in precise sequence:
+            Feature vector schema evaluated by the Random Forest classifier:
           </p>
         </div>
 
@@ -557,9 +552,9 @@ export default function DataSources() {
             <Database className="w-3.5 h-3.5" />
             <span>Authoritative Inputs</span>
           </div>
-          <h2 className="text-lg font-bold text-slate-900">Authoritative Datasets & Model Files</h2>
+          <h2 className="text-lg font-bold text-slate-900">Datasets & Model Files</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Verified repository inputs powering the backend and ML inference services:
+            Repository datasets powering the backend and ML services:
           </p>
         </div>
 
@@ -631,17 +626,17 @@ export default function DataSources() {
         <div className="space-y-1.5 text-xs text-amber-950 leading-relaxed">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-amber-900">
-              Data Integrity & Coordinate-to-Event Protocol
+              Data Integrity & Coordinate Protocol
             </h3>
             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 border border-amber-300">
-              Zero Synthetic Injections
+              Spatial Mapping
             </span>
           </div>
           <p>
-            In strict adherence to defense intelligence standards, <strong className="text-amber-900">coordinate-to-event relationships must come from a verified mapping and must NOT be fabricated.</strong>
+            <strong className="text-amber-900">Coordinate-to-event relationships derive from spatial mapping.</strong>
           </p>
           <p>
-            Observation rows in <code className="bg-white/80 text-amber-900 px-1.5 py-0.5 rounded border border-amber-200 font-mono">fire_dataset.csv.xls</code> and geographic infrastructure locations in <code className="bg-white/80 text-amber-900 px-1.5 py-0.5 rounded border border-amber-200 font-mono">osm_india_features.csv</code> represent independent geospatial layers. They are never erroneously joined by row index. Coordinates displayed on the GIS surveillance map originate from authoritative spatial joins and verified Indian infrastructure centroids.
+            Observation rows in <code className="bg-white/80 text-amber-900 px-1.5 py-0.5 rounded border border-amber-200 font-mono">fire_dataset.csv.xls</code> and infrastructure locations in <code className="bg-white/80 text-amber-900 px-1.5 py-0.5 rounded border border-amber-200 font-mono">osm_india_features.csv</code> represent independent geospatial layers joined through spatial queries and verified coordinates.
           </p>
         </div>
       </div>

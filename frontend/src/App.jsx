@@ -89,9 +89,7 @@ export default function App() {
               <span className="font-mono text-slate-400">SIH PS 26162</span>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-slate-400">
-              <span>Authoritative Data Layer Verified</span>
-              <span>•</span>
-              <span>Zero-Fabrication Policy</span>
+              <span>Data Layer Active</span>
             </div>
           </div>
         </footer>

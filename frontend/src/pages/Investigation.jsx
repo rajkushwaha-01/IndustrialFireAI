@@ -29,27 +29,19 @@ import {
 import {
   Flame,
   Zap,
-  Thermometer,
   ShieldCheck,
-  ShieldAlert,
   Layers,
   MapPin,
   Clock,
-  Compass,
   Building2,
   Activity,
   ArrowLeft,
   ExternalLink,
   Info,
   AlertTriangle,
-  Sliders,
-  CheckCircle,
-  HelpCircle,
   Satellite,
-  Maximize2,
   RefreshCw,
-  Search,
-  Check
+  Search
 } from 'lucide-react';
 import { DESIGN_TOKENS } from '../theme/tokens';
 
@@ -245,7 +237,7 @@ export default function Investigation() {
               </Link>
               <span className="text-slate-300">•</span>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-900 text-white uppercase tracking-wider">
-                Phase 9 Investigation Workflow
+                Incident Investigation
               </span>
             </div>
 
@@ -262,7 +254,7 @@ export default function Investigation() {
               )}
             </div>
             <p className="text-xs sm:text-sm text-slate-500 max-w-3xl">
-              Multimodal incident examination isolating acute industrial blazes, flare stacks, and brick kilns through thermal radiometry, temporal duration, and OpenStreetMap industrial correlation.
+              Incident analysis integrating thermal radiometry, temporal duration, and OpenStreetMap spatial correlation.
             </p>
           </div>
 
@@ -301,7 +293,7 @@ export default function Investigation() {
 
         {/* Quick Sample Selector for SIH Demonstration */}
         <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-          <span className="font-semibold text-slate-700">Sample SIH Events:</span>
+          <span className="font-semibold text-slate-700">Sample Events:</span>
           <button
             onClick={() => navigate('/investigate/1001')}
             className={`px-2.5 py-1 rounded-lg border text-xs font-mono transition-all ${
@@ -347,8 +339,8 @@ export default function Investigation() {
 
       {loading && !eventData ? (
         <LoadingState
-          title={`Compiling Investigation Dossier for Event #${eventId}...`}
-          description="Synthesizing radiometric thermal measurements, spatial proximity to 139k OSM nodes, and AI evidence factors..."
+          title={`Loading Investigation Event #${eventId}...`}
+          description="Compiling radiometric measurements, spatial proximity metrics, and evidence factors..."
         />
       ) : error ? (
         <ErrorState
@@ -440,11 +432,11 @@ export default function Investigation() {
                 </div>
               </div>
 
-              {/* Card 3: AI PREDICTION & MODEL */}
+              {/* Card 3: ML PREDICTION & MODEL */}
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-card space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    AI Classification
+                    ML Classification
                   </span>
                   <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
                     <ShieldCheck className="w-4 h-4" />
@@ -530,10 +522,10 @@ export default function Investigation() {
                   </div>
                   <div>
                     <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                      AI Classification Rationale: Why Was This Event Classified as "{eventData.fire_type || eventData.classification}"?
+                      Classification Rationale: {eventData.fire_type || eventData.classification}
                     </h2>
                     <p className="text-xs text-slate-500">
-                      Evidence fusion combining thermal radiometry, multi-temporal persistence, and spatial proximity to industrial facilities.
+                      Thermal radiometry, multi-temporal persistence, and spatial proximity metrics.
                     </p>
                   </div>
                 </div>
@@ -562,7 +554,7 @@ export default function Investigation() {
                       `${(eventData.spatial_context?.nearest_industrial_area_km ?? eventData.distance_to_industrial_area_km ?? 0).toFixed(2)} km to industrial zone`}
                   </p>
                   <p className="text-[11px] text-slate-500 leading-snug">
-                    Thermal observations within ≤3 km of power plants, storage tanks, or chemical plants exhibit strong industrial correlation.
+                    Proximity threshold: ≤3 km to industrial facilities.
                   </p>
                 </div>
 
@@ -585,7 +577,7 @@ export default function Investigation() {
                       `${eventData.persistence_days} days multi-temporal cluster`}
                   </p>
                   <p className="text-[11px] text-slate-500 leading-snug">
-                    Agricultural residue fires burn out in 1–3 days. Ongoing industrial flaring or kilns persist over weeks/months.
+                    Temporal persistence across satellite observation cycles.
                   </p>
                 </div>
 
@@ -606,7 +598,7 @@ export default function Investigation() {
                       `${(eventData.frp || eventData.avg_frp || 0).toFixed(2)} MW average radiative power`}
                   </p>
                   <p className="text-[11px] text-slate-500 leading-snug">
-                    Intense combustion at refinery stacks and steel furnaces produces high radiative wattage exceeding typical forest brush.
+                    Fire Radiative Power (MW) from VIIRS thermal channels.
                   </p>
                 </div>
 
@@ -627,7 +619,7 @@ export default function Investigation() {
                       `${eventData.spatial_context?.nearby_infrastructure_count || nearbyInfra.length} industrial facilities nearby`}
                   </p>
                   <p className="text-[11px] text-slate-500 leading-snug">
-                    Evaluates multi-facility clustering (substations, refineries, chemical storage, industrial parks) within 10km radius.
+                    Industrial facility count within 10 km radius.
                   </p>
                 </div>
               </div>
@@ -668,7 +660,7 @@ export default function Investigation() {
                 <div className="space-y-3 flex flex-col justify-between">
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
                     <span className="font-bold text-slate-900 block uppercase tracking-wide">
-                      Automated Diagnostic Synthesis
+                      Diagnostic Summary
                     </span>
                     <p className="text-slate-600 leading-relaxed">
                       {eventData.fire_type === 'Industrial Fire'
@@ -686,10 +678,10 @@ export default function Investigation() {
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <div className="space-y-1">
                       <strong className="font-semibold block text-[11px] uppercase tracking-wide">
-                        Scientific Guardrail & Probabilistic Limitation
+                        Data Limitation
                       </strong>
                       <p className="text-[11px] text-amber-800 leading-relaxed">
-                        Thermal anomaly classification is probabilistic and derived from VIIRS/MODIS radiometric measurements and OpenStreetMap spatial correlation. Satellite data alone cannot establish definitive on-the-ground physical root cause without physical field inspection.
+                        Classifications are probabilistic models based on VIIRS/MODIS radiometry and OSM data; physical field inspection is required for ground verification.
                       </p>
                     </div>
                   </div>
@@ -702,14 +694,14 @@ export default function Investigation() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-geo-50 text-geo-700 flex items-center justify-center border border-geo-200">
-                    <Compass className="w-4 h-4" />
+                    <MapPin className="w-4 h-4" />
                   </div>
                   <div>
                     <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                      Spatial Proximity & Surrounding Infrastructure Audit
+                      Spatial Proximity & Infrastructure
                     </h2>
                     <p className="text-xs text-slate-500">
-                      Geodesic distances calculated against 139,682 authoritative OpenStreetMap India features.
+                      Geodesic distances to OpenStreetMap infrastructure features.
                     </p>
                   </div>
                 </div>
@@ -799,10 +791,10 @@ export default function Investigation() {
                   </div>
                   <div>
                     <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                      Interactive Geographic Investigation Map
+                      Investigation Map
                     </h2>
                     <p className="text-xs text-slate-500">
-                      High-resolution satellite imagery inspection with thermal anomaly anchor and surrounding OSM industrial infrastructure.
+                      Thermal anomaly location and surrounding OSM infrastructure.
                     </p>
                   </div>
                 </div>
@@ -1005,11 +997,11 @@ export default function Investigation() {
                     <div className="bg-white rounded-2xl p-6 max-w-md shadow-2xl space-y-3">
                       <Info className="w-8 h-8 text-geo-700 mx-auto" />
                       <h3 className="text-base font-bold text-slate-900">
-                        Zero-Fabrication Geographic Safeguard
+                        Geographic Coordinates Unavailable
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Event #{eventData.id} originates from historical multi-temporal telemetry without raw coordinates. 
-                        Precomputed spatial distances are preserved with full integrity, but an artificial geographic pin is strictly avoided.
+                        Event #{eventData.id} originates from observation records without explicit latitude and longitude coordinates. 
+                        Precomputed spatial distances to infrastructure remain available.
                       </p>
                       <button
                         onClick={() => navigate('/investigate/1001')}
@@ -1027,10 +1019,10 @@ export default function Investigation() {
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                   <div className="space-y-0.5">
                     <span className="font-bold text-slate-800 uppercase tracking-wide text-[11px] block">
-                      Multi-Modal External Satellite Verification
+                      External Satellite Verification
                     </span>
                     <span className="text-slate-500">
-                      Cross-examine optical multispectral ground conditions through independent satellite archives.
+                      Optical multispectral imagery archives.
                     </span>
                   </div>
 

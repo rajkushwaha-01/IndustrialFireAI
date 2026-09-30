@@ -4,7 +4,7 @@ import { Layers, RotateCcw } from 'lucide-react';
 export default function EmptyState({
   icon: Icon = Layers,
   title = 'No Records Found',
-  description = 'No matching observation events or infrastructure coordinates found for the selected criteria.',
+  description = 'No records match the selected criteria.',
   actionLabel,
   onAction,
   className = ''

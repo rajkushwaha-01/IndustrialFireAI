@@ -15,12 +15,10 @@ import Supercluster from 'supercluster';
 import { 
   Flame, 
   Zap, 
-  Thermometer, 
   Activity, 
   SlidersHorizontal, 
   RotateCcw, 
   Maximize2, 
-  Compass, 
   Info, 
   Building2, 
   Layers, 
@@ -42,12 +40,8 @@ import {
   AlertTriangle,
   RefreshCw,
   Crosshair,
-  Filter,
   Check,
-  Globe,
-  Cpu,
-  HelpCircle,
-  Sliders
+  Globe
 } from 'lucide-react';
 import { fetchEventsGeoJSON, fetchInfrastructureGeoJSON } from '../services/api';
 import { 
@@ -890,14 +884,15 @@ export default function MapView() {
         </span>
         <span className="text-slate-500">•</span>
         <span className="text-slate-300 text-[10px]">
-          Visual optical context only (Not thermal data)
+          Optical
         </span>
         <button
           onClick={() => setIsDistinctionModalOpen(true)}
           className="ml-1 p-0.5 text-slate-400 hover:text-white rounded-full transition-colors"
           title="Learn how Satellite, FIRMS, OSM, and AI interact"
+          aria-label="Data tier information"
         >
-          <HelpCircle className="w-3.5 h-3.5 text-sky-400 hover:text-sky-300" />
+          <Info className="w-3.5 h-3.5 text-sky-400 hover:text-sky-300" />
         </button>
       </div>
 
@@ -906,7 +901,7 @@ export default function MapView() {
         <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[1000] bg-sky-950/95 backdrop-blur-md text-sky-100 px-4 py-2 rounded-2xl border border-sky-600/80 shadow-2xl flex items-center gap-3 animate-in fade-in">
           <Crosshair className="w-4 h-4 text-sky-400 animate-pulse" />
           <div className="text-xs">
-            <span className="font-bold text-white">Satellite Inspection Mode Active:</span> Examining high-resolution surface imagery surrounding Observation #{selectedFeature?.properties?.id || selectedFeature?.id}
+            <span className="font-bold text-white">Satellite Inspection:</span> Observation #{selectedFeature?.properties?.id || selectedFeature?.id}
           </div>
           <button
             onClick={handleExitSatelliteInspection}
@@ -934,8 +929,8 @@ export default function MapView() {
       {/* 9. Loading State Overlay */}
       {loading && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1100] bg-slate-900/90 backdrop-blur-md text-white px-4 py-2 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-3">
-          <Compass className="w-4 h-4 text-red-500 animate-spin" />
-          <span className="text-xs font-medium">Streaming genuine FIRMS GeoJSON observations...</span>
+          <RefreshCw className="w-4 h-4 text-red-500 animate-spin" />
+          <span className="text-xs font-medium">Streaming FIRMS GeoJSON observations...</span>
         </div>
       )}
 
@@ -965,10 +960,10 @@ export default function MapView() {
             </div>
             <div>
               <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                GIS Surveillance Filter
+                Event Filters
               </h2>
               <span className="text-[10px] text-slate-500">
-                {filteredFireFeatures.length} of {fireFeatures.length} events displayed
+                {filteredFireFeatures.length} of {fireFeatures.length} events
               </span>
             </div>
           </div>
@@ -1142,7 +1137,7 @@ export default function MapView() {
           <div className="flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-blue-600" />
             <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider">
-              GIS Layer & Satellite Control
+              Layers & Basemap
             </span>
           </div>
           <button
@@ -1222,7 +1217,7 @@ export default function MapView() {
                 className="w-full accent-red-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
               />
               <span className="text-[9px] text-slate-400 block mt-0.5">
-                Dim overlays to view high-resolution ground structures beneath hotspots.
+                Adjust overlay transparency.
               </span>
             </div>
 
@@ -1306,7 +1301,7 @@ export default function MapView() {
         <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
           <span className="font-bold text-slate-900 text-[10px] uppercase tracking-wider flex items-center gap-1">
             <Radio className="w-3 h-3 text-red-600 animate-pulse" />
-            GIS Classification Legend
+            Legend
           </span>
           <button
             onClick={() => setIsLegendOpen(!isLegendOpen)}
@@ -1508,8 +1503,9 @@ export default function MapView() {
               </div>
 
               {/* Scientific Disclaimer Note */}
-              <p className="text-[8.5px] text-slate-400 italic pt-1 border-t border-slate-800 leading-tight">
-                🛡 Satellite radiometry &amp; spatial context provide probabilistic triage, not root-cause proof.
+              <p className="text-[8.5px] text-slate-400 italic pt-1 border-t border-slate-800 leading-tight flex items-center">
+                <ShieldCheck className="w-2.5 h-2.5 inline mr-1 text-slate-400 shrink-0" />
+                <span>Probabilistic classification based on radiometry and spatial proximity.</span>
               </p>
             </div>
 
@@ -1520,7 +1516,7 @@ export default function MapView() {
                 className="w-full py-1.5 bg-sky-900 hover:bg-sky-800 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
               >
                 <Satellite className="w-3.5 h-3.5 text-sky-400" />
-                Inspect Surrounding Area in Satellite
+                Inspect Satellite Imagery
               </button>
 
               {/* External Verification Links */}
@@ -1597,7 +1593,7 @@ export default function MapView() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">
-                    Multi-Modal Data Architecture & Source Distinction
+                    Data Sources & Sensor Tiers
                   </h3>
                   <p className="text-xs text-slate-500">
                     Smart India Hackathon 2024 (Problem Statement 26162)
@@ -1613,7 +1609,7 @@ export default function MapView() {
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              To guarantee scientific accuracy and operational reliability, the system explicitly separates optical surface observations from spaceborne radiometric thermal measurements:
+              The system explicitly separates optical surface observations from spaceborne radiometric thermal measurements:
             </p>
 
             {/* 4 Tiers List */}
@@ -1645,7 +1641,7 @@ export default function MapView() {
             <div className="bg-sky-50/80 border border-sky-200 rounded-2xl p-3 text-xs text-sky-900 flex items-start gap-2.5">
               <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
               <div className="text-[11px] leading-relaxed">
-                <strong>Critical Operational Rule:</strong> Optical satellite layers provide geographic and infrastructure ground truth for human validation and cross-referencing. They are never conflated with NASA FIRMS infrared thermal radiometer observations.
+                <strong>Data Note:</strong> Optical satellite layers provide visual surface context and are distinct from NASA FIRMS thermal radiometry.
               </div>
             </div>
 

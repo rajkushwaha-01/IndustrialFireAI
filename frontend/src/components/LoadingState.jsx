@@ -1,16 +1,16 @@
 import React from 'react';
-import { Loader2, Compass } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function LoadingState({
-  title = 'Querying Geospatial Intelligence Pipeline...',
-  description = 'Loading observation records and aggregating metrics',
+  title = 'Loading Data...',
+  description = 'Fetching records and metrics',
   className = ''
 }) {
   return (
     <div className={`bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-card flex flex-col items-center justify-center space-y-4 ${className}`}>
       <div className="relative flex items-center justify-center">
         <div className="w-12 h-12 rounded-2xl bg-geo-50 border border-geo-200 flex items-center justify-center text-geo-600 animate-pulse">
-          <Compass className="w-6 h-6 animate-spin text-geo-700" style={{ animationDuration: '3s' }} />
+          <Loader2 className="w-6 h-6 animate-spin text-geo-700" />
         </div>
         <span className="absolute -top-1 -right-1 w-3 h-3 bg-geo-500 rounded-full animate-ping" />
       </div>

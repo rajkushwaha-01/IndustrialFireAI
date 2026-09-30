@@ -37,14 +37,9 @@ import {
   Clock, 
   RefreshCw, 
   Info,
-  Compass,
+  Map as MapIcon,
   AlertCircle,
-  HelpCircle,
-  TrendingUp,
-  Cpu,
-  Radio,
-  SlidersHorizontal,
-  ExternalLink
+  TrendingUp
 } from 'lucide-react';
 import { DESIGN_TOKENS } from '../theme/tokens';
 
@@ -170,8 +165,8 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
     return (
       <PageContainer>
         <LoadingState
-          title="Loading SIH Thermal Intelligence Command Center..."
-          description="Retrieving real NASA FIRMS thermal observations, OpenStreetMap industrial anchors, and analytical distributions from backend..."
+          title="Loading Thermal Intelligence Command Center..."
+          description="Retrieving NASA FIRMS thermal observations, OpenStreetMap industrial anchors, and analytical distributions..."
         />
       </PageContainer>
     );
@@ -216,7 +211,7 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
                 Industrial Fire & Flare Discrimination
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> 100% Genuine Backend Data ({formatCount(totalAnomalies)} records)
+                <ShieldCheck className="w-3.5 h-3.5" /> {formatCount(totalAnomalies)} Records
               </span>
             </div>
 
@@ -225,10 +220,7 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-3xl">
-              <strong>The Problem:</strong> Satellite sensors (NASA FIRMS / VIIRS / MODIS) observe hundreds of thousands of thermal anomalies annually across India. 
-              Over <strong>97%</strong> are agricultural crop burning or harmless thermal noise. This intelligence dashboard fuses 
-              <strong> multi-temporal persistence</strong>, <strong>Fire Radiative Power (FRP)</strong>, and 
-              <strong> OpenStreetMap industrial proximity</strong> with an AI evidence framework to identify acute industrial blazes and permanent industrial thermal emitters.
+              Multi-temporal persistence, Fire Radiative Power (FRP), and OpenStreetMap proximity analysis for thermal anomaly classification.
             </p>
           </div>
 
@@ -249,9 +241,8 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
               to="/map"
               className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-geo-700 hover:bg-geo-800 text-white rounded-xl text-xs font-semibold transition-all shadow-xs"
             >
-              <Compass className="w-3.5 h-3.5" />
+              <MapIcon className="w-3.5 h-3.5" />
               <span>Full GIS Map</span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-white/80" />
             </Link>
             <Link
               to="/events"
@@ -270,110 +261,110 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-geo-700" />
             <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              SIH Problem Key Indicators (Click card to inspect filtered GIS events)
+              Key Indicators
             </h2>
           </div>
           <span className="text-[11px] text-slate-400 font-mono">
-            Directly derived from {formatCount(totalAnomalies)} genuine records
+            Total records: {formatCount(totalAnomalies)}
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {/* KPI 1: Total Thermal Anomalies */}
           <StatCard
-            title="1. Total Thermal Anomalies"
+            title="Total Anomalies"
             value={formatCount(totalAnomalies)}
-            subtext="Comprehensive thermal anomaly repository"
+            subtext="Total ingested observations"
             icon={Layers}
-            badgeText="All Ingested"
+            badgeText="Total"
             badgeType="default"
             to="/map"
           />
 
           {/* KPI 2: Industrial Fires */}
           <StatCard
-            title="2. Industrial Fires"
+            title="Industrial Fires"
             value={formatCount(industrialFires)}
-            subtext={`${stats?.byClassification?.['Industrial Fire']?.percentage || 1.08}% acute industrial blazes near factories`}
+            subtext={`${stats?.byClassification?.['Industrial Fire']?.percentage || 1.08}% of observations`}
             icon={Flame}
-            badgeText="Target Hazard"
+            badgeText="Industrial"
             badgeType="hazard"
             to="/map?classification=Industrial%20Fire"
           />
 
           {/* KPI 3: Persistent Thermal Sources */}
           <StatCard
-            title="3. Persistent Thermal Sources"
+            title="Persistent Sources"
             value={formatCount(persistentSources)}
-            subtext={`${stats?.byClassification?.['Persistent Thermal Source']?.percentage || 1.37}% flare stacks, refineries & kilns`}
+            subtext={`${stats?.byClassification?.['Persistent Thermal Source']?.percentage || 1.37}% of observations`}
             icon={Zap}
-            badgeText="Target Source"
+            badgeText="Persistent"
             badgeType="persistent"
             to="/map?classification=Persistent%20Thermal%20Source"
           />
 
           {/* KPI 4: Natural Fires */}
           <StatCard
-            title="4. Natural Fires"
+            title="Natural Fires"
             value={formatCount(naturalFires)}
-            subtext={`${stats?.byClassification?.['Natural Fire']?.percentage || 11.13}% seasonal agricultural & forest burns`}
+            subtext={`${stats?.byClassification?.['Natural Fire']?.percentage || 11.13}% of observations`}
             icon={Thermometer}
-            badgeText="Vegetation"
+            badgeText="Natural"
             badgeType="warning"
             to="/map?classification=Natural%20Fire"
           />
 
           {/* KPI 5: Other / Unknown */}
           <StatCard
-            title="5. Other / Unknown"
+            title="Other / Unclassified"
             value={formatCount(otherUnknown)}
-            subtext={`${stats?.byClassification?.['Other']?.percentage || 86.42}% background noise & minor thermal traces`}
+            subtext={`${stats?.byClassification?.['Other']?.percentage || 86.42}% of observations`}
             icon={AlertCircle}
-            badgeText="Filtered Out"
+            badgeText="Other"
             badgeType="default"
             to="/map?classification=Other"
           />
 
           {/* KPI 6: High-Confidence Events */}
           <StatCard
-            title="6. High-Confidence Events"
+            title="High Confidence"
             value={formatCount(highConfidenceEvents)}
-            subtext="Target classes verified ≥ 90% certainty"
+            subtext="Confidence ≥ 90%"
             icon={ShieldCheck}
-            badgeText="≥ 90% Precision"
+            badgeText="≥ 90%"
             badgeType="success"
             to="/events?minConfidence=0.9"
           />
 
           {/* KPI 7: Recent Detections */}
           <StatCard
-            title="7. Recent Detections"
+            title="Recent Detections"
             value={formatCount(recentDetections)}
-            subtext="Active multi-scan & coordinate records"
+            subtext="Georeferenced records"
             icon={Clock}
-            badgeText="Live Feed"
+            badgeText="Active"
             badgeType="geo"
             to="/events?hasCoordinates=true"
           />
 
           {/* KPI 8: High-FRP Events */}
           <StatCard
-            title="8. High-FRP Events"
+            title="High-FRP Events"
             value={formatCount(highFrpEvents)}
-            subtext="Extreme radiative intensity (avg FRP ≥ 30 MW)"
+            subtext="Average FRP ≥ 30 MW"
             icon={Activity}
-            badgeText="Severe Power"
+            badgeText="≥ 30 MW"
             badgeType="hazard"
             to="/map?minFrp=30"
           />
 
           {/* KPI 9: Events Near Industrial Infrastructure */}
           <StatCard
-            title="9. Near Industrial Infra"
+            title="Near Infrastructure"
             value={formatCount(eventsNearInfrastructure)}
-            subtext="Within ≤ 3.0 km of verified OSM industrial anchors"
+            subtext="Within ≤ 3.0 km of OSM nodes"
             icon={Building2}
-            badgeText="Spatial Anchor"
+            badgeText="≤ 3 km"
             badgeType="geo"
             to="/map?maxDistance=3.0"
           />
@@ -386,11 +377,11 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-geo-700" />
             <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              SIH Problem Multi-Dimensional Analytics (Genuine Backend Distributions)
+              Multi-Dimensional Analytics
             </h2>
           </div>
           <span className="text-[11px] text-slate-400">
-            Real dataset distributions: Classification • Temporal • FRP • Persistence • Proximity • Confidence
+            Distributions: Classification • Temporal • FRP • Persistence • Proximity • Confidence
           </span>
         </div>
 
@@ -400,9 +391,9 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
             <div className="flex items-start justify-between pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                  1. Classification Distribution
+                  Classification Distribution
                 </h3>
-                <p className="text-[11px] text-slate-500">Separating target industrial hazards from background noise</p>
+                <p className="text-[11px] text-slate-500">Breakdown by classification category</p>
               </div>
               <Flame className="w-4 h-4 text-flame-600 shrink-0" />
             </div>
@@ -459,9 +450,9 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
             <div className="flex items-start justify-between pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                  2. Temporal Observation Trend
+                  Observation Trend
                 </h3>
-                <p className="text-[11px] text-slate-500">Daily FIRMS thermal anomaly detection cadence</p>
+                <p className="text-[11px] text-slate-500">Daily detections timeline</p>
               </div>
               <Clock className="w-4 h-4 text-geo-700 shrink-0" />
             </div>
@@ -506,9 +497,9 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
             <div className="flex items-start justify-between pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                  3. Fire Radiative Power (FRP) Spectrum
+                  Fire Radiative Power (FRP)
                 </h3>
-                <p className="text-[11px] text-slate-500">Thermal energy output in Megawatts (MW)</p>
+                <p className="text-[11px] text-slate-500">Radiative power distribution (MW)</p>
               </div>
               <Activity className="w-4 h-4 text-flame-600 shrink-0" />
             </div>
@@ -552,9 +543,9 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
             <div className="flex items-start justify-between pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                  4. Multi-Temporal Persistence
+                  Persistence Distribution
                 </h3>
-                <p className="text-[11px] text-slate-500">Detection duration (1-day burn vs. 30+ day flares)</p>
+                <p className="text-[11px] text-slate-500">Detection duration in days</p>
               </div>
               <Zap className="w-4 h-4 text-purple-600 shrink-0" />
             </div>
@@ -600,9 +591,9 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
             <div className="flex items-start justify-between pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                  5. Infrastructure Proximity
+                  Infrastructure Proximity
                 </h3>
-                <p className="text-[11px] text-slate-500">Distance to nearest OSM industrial facility</p>
+                <p className="text-[11px] text-slate-500">Distance to nearest OSM facility (km)</p>
               </div>
               <Building2 className="w-4 h-4 text-geo-700 shrink-0" />
             </div>
@@ -646,9 +637,9 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
             <div className="flex items-start justify-between pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                  6. Model Confidence Distribution
+                  Model Confidence
                 </h3>
-                <p className="text-[11px] text-slate-500">Certainty breakdown across thermal events</p>
+                <p className="text-[11px] text-slate-500">Prediction confidence tiers</p>
               </div>
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
             </div>
@@ -699,10 +690,10 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                High-Priority Industrial Thermal Alerts
+                High-Priority Industrial Alerts
               </h2>
               <p className="text-xs text-slate-500">
-                Verified high-confidence observations (&gt;90%) with long persistence (&gt;30 days) indicating flare stacks, steel works, or kilns.
+                High-confidence observations (&gt;90%) with persistence &gt;30 days.
               </p>
             </div>
           </div>
@@ -772,19 +763,19 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-geo-50 text-geo-700 flex items-center justify-center border border-geo-200">
-              <Compass className="w-4 h-4" />
+              <MapIcon className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                  Surveillance Infrastructure Map Preview
+                  Infrastructure Map Preview
                 </h2>
                 <span className="text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
-                  {infrastructureGeoJson?.features?.length || 120} Verified OSM Coordinates
+                  {infrastructureGeoJson?.features?.length || 120} OSM Points
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Rendered using verified coordinate points from osm_india_features.csv. Zero synthetic coordinates are fabricated.
+                OSM industrial facilities across India.
               </p>
             </div>
           </div>
@@ -848,7 +839,7 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
             <div className="flex items-start gap-2 text-xs">
               <Info className="w-4 h-4 text-geo-700 shrink-0 mt-0.5" />
               <p className="text-[11px] text-slate-600 leading-snug">
-                <strong className="text-slate-900">Zero-Fabrication Anchor Layer:</strong> Points represent verified power plants, industrial parks, and works from OSM India. Satellite ML records are matched through spatial proximity, never arbitrary row index.
+                <strong className="text-slate-900">Infrastructure:</strong> Power plants, industrial areas, and manufacturing facilities from OSM India.
               </p>
             </div>
           </div>
@@ -884,7 +875,7 @@ export default function Dashboard({ backendHealth, mlHealth, loadingHealth, refr
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
               Recent Observation Events
             </h2>
-            <p className="text-xs text-slate-500">Live feed streaming from authoritative thermal observation repository</p>
+            <p className="text-xs text-slate-500">Latest observation events from data repository.</p>
           </div>
           <Link
             to="/events"
