@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const cors = require('cors');
 const morgan = require('morgan');
 const config = require('./config');
@@ -28,6 +30,18 @@ if (config.nodeEnv !== 'test') {
 
 // API Routes mounted on /api
 app.use('/api', apiRoutes);
+
+const frontendBuildPath = path.resolve(__dirname, '../public');
+const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
+if (fs.existsSync(frontendIndexPath)) {
+  app.use(express.static(frontendBuildPath));
+  app.get('*', (req, res, next) => {
+    if (req.path === '/api' || req.path.startsWith('/api/') || !req.accepts('html')) {
+      return next();
+    }
+    res.sendFile(frontendIndexPath);
+  });
+}
 
 // Root overview
 app.get('/', (req, res) => {
